@@ -19,7 +19,23 @@ from IPython.display import clear_output    # to overwrite the avg. loop time/re
 import pickle                               # for saving to pickle
 import glob
 from tqdm import tqdm                       # for keeping track of progress
+import collections
 
+
+Input_Values = collections.namedtuple('Input_Values', [
+    'parameter_combos',
+    'values_array',
+    'dwell_array',
+    'num_sims',
+    'loop_num',
+    'startVar',
+    'nonDec',
+    'nonDecVar',
+    'driftVar',
+    'maxRT',
+    'precision',
+    's',
+])
 
 
 def values_for_simulation(values: List[float], sims_per_val: int) -> List[float]:
@@ -148,19 +164,14 @@ def save_parameters(parameter_combos):
     iterDf.to_csv(directory + '/parameter_combos_' + str(time) + '.csv')
 
 
-def save_sim_combo_csv(dfOut, loop_num, subject=None):
+def save_sim_combo_csv(dfOut, loop_num):
     """
     """
-
     now = dt.datetime.now()
     time = now.strftime("%Y-%m-%d-%H-%M")
     date = now.strftime("%Y-%m-%d")
 
-    if subject:
-        directory = ('/scratch/c/chutcher/wilsodj/MADE/outputs/' + str(date) + '/' + str(subject) + '/sims') 
-
-    else:
-        directory = ('/scratch/c/chutcher/wilsodj/MADE/outputs/' + str(date) + '/sims')                # set Directory to save CSV
+    directory = ('outputs/' + str(date) + '/sims')                # set Directory to save CSV
 
     if not os.path.exists(directory):                   # create the directory if it does not already exist
         os.makedirs(directory)
@@ -201,116 +212,6 @@ def save_sim_combo_shelve(dfOut, loop_num):
     with shelve.open(directory + '/all_sims', 'c') as shelf:
         # maybe name it as parameters?
         shelf[str(loop_num)] = dfOut
-
-
-def create_dwell_array_subject(num_sims, subj_first_fix, subj_mid_fix, data, exp_data=None, fixations=None):
-    """
-    Pulls out first and middle fixations from fixations_file_name.
-    Creates distribution of fixation times that can be used in aDDM simulation
-
-    Args:
-        fixations: df, fixations selected according to train/test parameter
-        exp_data: df, experimental data selected according to train/test parameter
-        num_sims: int, total number of simulations being run for each parameter combination
-        data: str, are we creating fixations for simulations or are we running test data
-        fixations: used for getting the test fixations durations for a subject
-    """
-    if data == 'sim':
-        
-        # first create distributions of first/mid fixations
-        first_fix_dist = subj_first_fix
-        mid_fix_dist = subj_mid_fix
-
-
-    if data == 'test':
-        
-        # first create distributions of first/mid fixations
-        first_fix_dist = subj_first_fix
-        mid_fix_dist = subj_mid_fix
-
-    # make sure that none of the final columns in the dwell array has a value smaller than maxRT
-    min_time = 0
-    
-
-    #--------------#
-    # SIM          #
-    #------------------------------------------------------------------------------------ #
-    # NOTE: for simulations (creating the initial distributions of RTs and choices)       #
-    # we are not looking at actual trial data. Just creating fixation durations from the  #
-    # distributions                                                                       #
-    #-------------------------------------------------------------------------------------#
-    
-    if data == 'sim':
-        while min_time < 10000:   # 10,000 = maxRT
-            # create column of first fixations
-            dwell_array = np.reshape(((np.random.choice(first_fix_dist, num_sims, replace=True))), (num_sims,1))
-
-            # create additional columns from middle fixation distribution
-            for column in range(20):
-                append_mid_fix_array = np.reshape(((np.random.choice(mid_fix_dist, num_sims, replace=True))), (num_sims,1))
-                dwell_array = np.append(dwell_array, append_mid_fix_array, axis=1)
-
-            # make each column the sum of itself and the previous column
-            for column in range(1, np.shape(dwell_array)[1]):
-                dwell_array[:,column] = dwell_array[:,column] + dwell_array[:,(column-1)] 
-
-            min_time = min(dwell_array[:,20])
-
-
-    #--------------#
-    # TEST         #
-    #------------------------------------------------------------------------------------ #
-    # NOTE: the difference with the 'test' version is that we are using the actual        #
-    # initial fixations and then filling out the rest of the fixations by sampling the    #
-    # group or subject first/mid fixation distribution                                    #
-    #-------------------------------------------------------------------------------------#
-
-    if data == 'test':
-        
-        # calculuate size based on actual number of trials (odd or even)
-        size = len(exp_data.trial) * num_sims 
-    
-        while min_time < 10000:   # 10,000 = maxRT
-            # add data from trial fixations
-            dwell_array = np.reshape(((np.random.choice(first_fix_dist, size , replace=True))), (size,1))
-
-            # create additional columns (number of columns determined by range()) from middle fixation distribution
-            for column in range(21):
-                append_mid_fix_array = np.reshape(((np.random.choice(mid_fix_dist, size, replace=True))), (size,1))
-                dwell_array = np.append(dwell_array, append_mid_fix_array, axis=1)
-
-            # overwrite initial columns with actual fixation values
-            row_start = 0
-            row_end = 1000  # Need to change this to the number of sims!
-            column = 0
-
-            #from IPython.core.debugger import Tracer; Tracer()()
-            for i in tqdm(range(len(fixations.trial))):
-                if i == 0:    # first row
-                    dwell_array[row_start:row_end, column] = fixations.fix_time[i]
-                    
-
-                elif (fixations.trial[i]) == (fixations.trial[i-1]):
-                    column +=1
-                    dwell_array[row_start:row_end, column] = fixations.fix_time[i]
-
-                else:
-                    column = 0
-                    row_start +=1000
-                    row_end += 1000
-                    dwell_array[row_start:row_end, column] = fixations.fix_time[i]
-
-            # make each column the sum of itself and the previous column
-            for column in range(1, np.shape(dwell_array)[1]):
-                dwell_array[:,column] = dwell_array[:,column] + dwell_array[:,(column-1)] 
-
-            min_time = min(dwell_array[:,21])
-        
-    # cast to int (does this make it faster?)
-    dwell_array = dwell_array.astype(int)
-    t_dwells = np.transpose(dwell_array)        # this is to make things row major
-    
-    return t_dwells
 
 
 def create_dwell_array(num_sims, fixations, data, exp_data=None):
@@ -610,6 +511,8 @@ def simul_addm_test_data(test_data, dwell_array,
     return test_data
 
 
+
+
 def simul_addm(parameter_combos, values_array_addm, dwell_array, num_sims, loop_num,
     startVar, nonDec, nonDecVar, driftVar, maxRT, precision, s):
     """
@@ -635,7 +538,7 @@ def simul_addm(parameter_combos, values_array_addm, dwell_array, num_sims, loop_
     #-----------------#
 
     # initialize boolean vector indicating whether ddms still within bounds
-    within_bounds = np.ones((num_sims), dtype=bool)         
+    within_bounds = np.ones((num_sims), dtype=bool)       
     # -.5 to mean center (starting dist. uniform)
     ddms = np.zeros(num_sims) + startVar * (np.random.rand(num_sims) - .5)  
 
@@ -744,6 +647,190 @@ def save_to_df(rt, resp, drift_left, drift_right, values_array_addm, scaling, up
     return df
 
 
+#----------------------------#
+# MAP VERSION FOR PARALLEL   #
+#----------------------------#
+
+def simul_addm_rt_dist(parameters, input_vals, dwell_array):
+    """
+
+    Args:
+        data: str, are we creating simulation disribution or simulating from test data 
+    """
+
+    t = 0                                                   # initialize time to zero
+
+    #------------------#
+    # GET PARAM COMBO  #
+    #------------------#
+
+    scaling = parameters[0]                  # drift scaling on loop
+    upper = parameters[1]                    # boundary
+    lower = -1 * upper
+    theta = parameters[2]              # discount on non-observed
+
+    print(f'Process {os.getpid()} simulating for parameters: scaling = {scaling}, boundary = {upper}, theta = {theta}')
+
+    #-----------------#
+    # INIT VARS       #
+    #-----------------#
+
+    # initialize boolean vector indicating whether ddms still within bounds
+    within_bounds = np.ones((input_vals.num_sims), dtype=bool)       
+    
+    # -.5 to mean center (starting dist. uniform)
+    ddms = np.zeros(input_vals.num_sims)\
+    + input_vals.startVar * (np.random.rand(input_vals.num_sims) - .5)  
+
+    resp = np.nan * np.ones(input_vals.num_sims)        # initialize choices
+    rt = np.nan * np.ones(input_vals.num_sims)          # initialize rt
+    drift = np.zeros(input_vals.num_sims)               # initialize drift
+ 
+
+    # tools for swapping the drift dynamically
+    current_drift = np.random.randint(0,2, size = input_vals.num_sims, dtype=bool) # Determine which stimulus is attended to first                                                            
+    indexing_vector = np.zeros(input_vals.num_sims).astype(int)     # vector that will link to the correct dwell time before changing drift
+    all_rows = np.arange(input_vals.num_sims)                       # just a count of all rows to use for indexing with the indexing_vector
+    change_time = dwell_array[indexing_vector, all_rows]    		# Get the first array of fixation change times 
+
+    # Left and Right drift (applies to the attended item)
+    drift_left  = scaling * (input_vals.values_array[0,:] + (theta * input_vals.values_array[1,:])) # + (driftVar * np.random.randn(num_sims,1))
+    drift_right = scaling * (input_vals.values_array[1,:] + (theta * input_vals.values_array[0,:])) # + (driftVar * np.random.randn(num_sims,1))
+    
+    #initUpper = upper                 # for collapsing bounds
+    #AUC = np.zeros((len(drift),1))    # signed added up (not essential)
+    #AUC2 = np.zeros((len(drift),1))   # absolute value added up (not essential)
+
+
+    #-----------------#
+    # LOOP.           #
+    #-----------------#
+
+    while (t < (input_vals.maxRT/input_vals.precision)) and np.count_nonzero(within_bounds): # any paths still going   
+        
+        t = t+1
+
+        # at the end of each pass check if any simulations have reached their change time
+        # if so...
+        # add one to the indexing vector for that simulation
+        indexing_vector[np.where(t >=change_time)] += 1
+
+        # swap the current drift for that simulation
+        change_fixation = np.array(np.where(t >=change_time))       # create an array of all sims where fixation should switch
+        np.logical_not.at(current_drift, change_fixation)           # in place flips boolean vals based on change_fixation array
+        # then recreate the change_time value based on the new indexing_vector
+        change_time = dwell_array[indexing_vector, all_rows]
+
+        # initialize all drift rates as LEFT drift rate
+        np.copyto(drift, drift_left)                                # np.copyto(to, from)    
+
+        # overwrite those that are TRUE (current_drift var) with RIGHT drift rate
+        np.copyto(drift, drift_right, where=current_drift)          # np.copyto(to, from, mask)
+
+        # only dealing with those that are still going...
+        # SHOULD this be a copyto?
+        meanDrift = drift[within_bounds]
+    
+        # Roger (variance is at .1 so might not need square root)
+        dy = meanDrift * input_vals.precision + (input_vals.s * (np.sqrt(input_vals.precision)) * np.random.randn(np.sum(within_bounds,)))
+
+        ddms[within_bounds] = ddms[within_bounds] + dy
+    
+#       AUC(within_bounds) = AUC(within_bounds) + abs(ddms(within_bounds));
+#       AUC2(within_bounds) = AUC2(within_bounds) + ddms(within_bounds);
+    
+#        if ReturnTraces
+#        traces(:,t) = ddms(TracesToRetain);
+#        break
+    
+        # select ddms that have completed but don't have response data recorded
+        within_bounds[ddms>=upper] = False
+        within_bounds[ddms<=lower] = False
+        # identifying ddms that crossed at time t (within_bounds = False, no logged response)
+        #justDone = np.asarray([within_bounds[i]==False and np.isnan(resp[i]) for i in range(len(within_bounds))])
+        justDone = (within_bounds == False) & (np.isnan(resp))  
+        
+        # log resp and RT data
+        resp[justDone] = np.sign(ddms[justDone])  # sign 1 if value is positive or -1 if value is negative
+        rt[justDone] = t
+    
+    # COLLAPSING BOUNDARIES
+    #upper = initUpper * exp(-1 * collapseRate * t);
+    #lower = -1 * upper;
+    #break
+    
+    #-----------------#
+    # OUTPUT          #
+    #-----------------#
+
+    rt = rt * input_vals.precision     # convert to seconds
+    rt = rt + input_vals.nonDec        # add non decision time
+
+    df = pd.DataFrame(rt, columns= ['rt'])
+    df['resp'] = resp
+    df['drift_left'] = drift_left
+    df['drift_right'] = drift_right
+    df['val_face'] = input_vals.values_array[0,:]
+    df['val_house'] = input_vals.values_array[1,:]
+    df['summed_val'] = input_vals.values_array[0,:] + input_vals.values_array[1,:] 
+    df['scaling'] = scaling
+    df['upper_boundary'] = upper
+    df['theta'] = theta
+
+    # add correct column?
+    df = df.dropna()                          # get rid of sims that didn't terminate
+
+    #-----------------#
+    # RT DIST         #
+    #-----------------#
+
+    # from IPython.core.debugger import Tracer; Tracer()()
+    
+    # Create upper level dict to hold param combos
+    rtDist = {}
+
+    # Create bins for RT distribution
+    bins = np.arange(input_vals.nonDec,10.1,.1)             # start, stop, step (used for hist)
+    binz = np.delete(bins,-1)                    # delete the last value so bin number = count number
+
+    # List of all unique value pairs
+    value_pairs = np.transpose(np.unique(input_vals.values_array, axis=1))   # transposing to get rows of value pairs
+
+    # Name for outer dict based on the weight, boundary and theta, with an integer (as STRING) leading
+    extracted_parameters = str(round(scaling, 3)) + '_' + str(round(upper, 3)) + '_' + str(round(theta, 3))
+    # Create dict to hold values
+    rtDist[extracted_parameters] = {}
+
+    y = 0 # counter for value_pairs
+    # create subsets of RT for each drift value
+    for x in value_pairs:
+        data = df[(df.val_face == value_pairs[y][0]) & (df.val_house == value_pairs[y][1])]
+        
+        data0 = data[data.resp == -1]             		# select reject responses
+        data1 = data[data.resp == 1]              		# select accept responses
+
+        # Create RT distrib (counts/bin)
+        count0, bins = np.histogram(data0.rt, bins)  	# unpack the reject counts in each bin
+        count1, bins = np.histogram(data1.rt, bins)  	# unpack the accept counts in each bin
+
+        length = float(sum(count0) + sum(count1))    	# number of non NaN values
+
+        # initialize array to hold Distribs
+        distrib = np.ndarray((len(count0), 3))
+        distrib[:,0] = binz                      		# bin values from START of bin
+        distrib[:,1] = count0 /length              		# reject
+        distrib[:,2] = count1 /length              		# accept
+
+        # create dict key based on value pair
+        vp = str(x[0]) + '_' + str(x[1])
+        # select the rows with given drift  # remove all columns except rt and resp
+        rtDist[extracted_parameters][vp] = distrib
+
+        y+=1
+
+    print(f'Finished processing parameters: scaling = {scaling}, boundary = {upper}, theta = {theta}')
+
+    return(rtDist)
 
 #-------------------#
 # FITTING           #
@@ -761,13 +848,14 @@ def combine_sims(input_filepath, output_filepath):
     for f in tqdm(all_files):
         dfs[x] = pd.read_csv(f)
         dfs[x] = dfs[x].drop(dfs[x].columns[[0]], axis=1)  # get rid of unnamed column
+        dfs[x] = reduce_mem_usage(dfs[x])
         x+=1
     
     if not os.path.exists(output_filepath):               # create the directory if it does not already exist
         os.makedirs(output_filepath)
         
     pickle_out = open(output_filepath + "sims_dict.pickle","wb")
-    pickle.dump(dfs, pickle_out)
+    pickle.dump(dfs, pickle_out, pickle.HIGHEST_PROTOCOL)
     pickle_out.close()
 
 
@@ -797,7 +885,6 @@ def rtDistFunc(nonDec, values_array, path_to_save):
         rtDist[extracted_parameters] = {}
 
         y = 0 # counter for value_pairs
-
         # create subsets of RT for each drift value
         for x in value_pairs:
             data = all_sims[param_combo][(all_sims[param_combo].val_face == value_pairs[y][0]) & (all_sims[param_combo].val_house == value_pairs[y][1])]
@@ -1036,6 +1123,71 @@ def pickle_read(path_to_file):
     return out_file
 
 
+# Function to reduce size of dataframes
+def reduce_mem_usage(props):
+    #start_mem_usg = props.memory_usage().sum() / 1024**2 
+    #print("Memory usage of properties dataframe is :",start_mem_usg," MB")
+    NAlist = [] # Keeps track of columns that have missing values filled in. 
+    for col in props.columns:
+        if props[col].dtype != object:  # Exclude strings
+            
+            # Print current column type
+            #print("******************************")
+            #print("Column: ",col)
+            #print("dtype before: ",props[col].dtype)
+            
+            # make variables for Int, max and min
+            IsInt = False
+            mx = props[col].max()
+            mn = props[col].min()
+            
+            # Integer does not support NA, therefore, NA needs to be filled
+            if not np.isfinite(props[col]).all(): 
+                NAlist.append(col)
+                props[col].fillna(mn-1,inplace=True)  
+                   
+            # test if column can be converted to an integer
+            asint = props[col].fillna(0).astype(np.int64)
+            result = (props[col] - asint)
+            result = result.sum()
+            if result > -0.01 and result < 0.01:
+                IsInt = True
 
+            
+            # Make Integer/unsigned Integer datatypes
+            if IsInt:
+                if mn >= 0:
+                    if mx < 255:
+                        props[col] = props[col].astype(np.uint8)
+                    elif mx < 65535:
+                        props[col] = props[col].astype(np.uint16)
+                    elif mx < 4294967295:
+                        props[col] = props[col].astype(np.uint32)
+                    else:
+                        props[col] = props[col].astype(np.uint64)
+                else:
+                    if mn > np.iinfo(np.int8).min and mx < np.iinfo(np.int8).max:
+                        props[col] = props[col].astype(np.int8)
+                    elif mn > np.iinfo(np.int16).min and mx < np.iinfo(np.int16).max:
+                        props[col] = props[col].astype(np.int16)
+                    elif mn > np.iinfo(np.int32).min and mx < np.iinfo(np.int32).max:
+                        props[col] = props[col].astype(np.int32)
+                    elif mn > np.iinfo(np.int64).min and mx < np.iinfo(np.int64).max:
+                        props[col] = props[col].astype(np.int64)    
+            
+            # Make float datatypes 32 bit
+            else:
+                props[col] = props[col].astype(np.float32)
+            
+            # Print new column type
+            #print("dtype after: ",props[col].dtype)
+            #print("******************************")
+    
+    # Print final result
+    #print("___MEMORY USAGE AFTER COMPLETION:___")
+    #mem_usg = props.memory_usage().sum() / 1024**2 
+    #print("Memory usage is: ",mem_usg," MB")
+    #print("This is ",100*mem_usg/start_mem_usg,"% of the initial size")
+    return props
 
 
