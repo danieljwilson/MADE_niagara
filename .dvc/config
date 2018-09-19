@@ -1,0 +1,4 @@
+['remote "myremote"']
+url = ssh://wilsodj@niagara.scinet.utoronto.ca:/PROJECTS/01_MADE/MADE_niagara/dvc_storage
+[core]
+remote = myremote
