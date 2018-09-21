@@ -2,10 +2,12 @@ import sys
 import os
 import collections
 import time
+from datetime import datetime
 import multiprocessing
 import concurrent.futures
 import numpy as np
 import pandas as pd
+import pickle
 import utils_addm_02 as utils_addm        # for importing custom module
 
 
@@ -13,10 +15,21 @@ import utils_addm_02 as utils_addm        # for importing custom module
 # DATA FILES  #
 #-------------#
 # Trial Data
-expdata_file_name = "_testing/Parallel/data/made_v2/expdata.csv"
+expdata_file_name = "01_MADE/data/made_v2/expdata.csv"
 # Fixation Data
-fixations_file_name = "_testing/Parallel/data/made_v2/fixations.csv"
+fixations_file_name = "01_MADE/data/made_v2/fixations.csv"
 
+#-----------------#
+# OUTPUT PATH     #
+#-----------------#
+# Date
+now = datetime.now().strftime('%Y_%m_%d_%H%M/')
+# Version
+version = "002/"
+# Path
+path = "01_MADE/output/" + version + now
+# Make directory
+os.makedirs(path)
 
 #------------------#
 # aDDM PARAMETERS  #
@@ -28,7 +41,10 @@ upper_boundary = np.linspace(0.05, 0.35, 8)
 # THETA VALUE
 theta = np.linspace(0.1, 1, 6)
 parameter_combos = utils_addm.parameter_values(drift_weight, upper_boundary, theta)
-
+# To save search space later
+parameter_search_space = {"drift_weight": drift_weight,
+                          "upper_boundary": upper_boundary,
+                          "theta": theta}
 
 #----------------#
 # VALUES ARRAY   #
@@ -73,8 +89,24 @@ def rt_dist_sim(parameters):
 start = time.time()
 
 with concurrent.futures.ProcessPoolExecutor() as executor:
-    rtDist = tuple(executor.map(rt_dist_sim, parameter_combos))
+    rt_dist = tuple(executor.map(rt_dist_sim, parameter_combos))
 
 end = time.time()
+run_duration = end - start
+print(run_duration)
+#-----------------#
+# SAVE FILES      #
+#-----------------#
 
-print(f'\nTime to completion: {end-start:.2f}\n')
+# Save RT dist file
+utils_addm.pickle_save(path, "rt_dist.pickle", rt_dist)
+
+# Save parameters
+utils_addm.pickle_save(path, "parameters.pickle", parameter_search_space)
+utils_addm.pickle_save(path, "input_vals.pickle", input_vals)
+# Save Run time
+f = open(path + "runtime.txt", 'w')
+f.write("Run time = " + str(run_duration))
+f.write("You ran {0} simulations for each value. Num sims variable = {1}. Maybe total number of simulations: {2}.".format(
+    sims_per_val, num_sims, values_array.shape[0]))
+f.close()
