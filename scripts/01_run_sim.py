@@ -35,11 +35,11 @@ os.makedirs(path)
 # aDDM PARAMETERS  #
 #------------------#
 # SCALING VALUE FOR DRIFT
-drift_weight = np.linspace(0.005, 0.15, 8)
+drift_weight = np.linspace(0.005, 0.15, 16)
 # BOUNDARY VALUE
-upper_boundary = np.linspace(0.05, 0.35, 8)
+upper_boundary = np.linspace(0.05, 0.35, 16)
 # THETA VALUE
-theta = np.linspace(0.1, 1, 6)
+theta = np.linspace(0.1, 1, 12)
 parameter_combos = utils_addm.parameter_values(drift_weight, upper_boundary, theta)
 # To save search space later
 parameter_search_space = {"drift_weight": drift_weight,
@@ -49,7 +49,7 @@ parameter_search_space = {"drift_weight": drift_weight,
 #----------------#
 # VALUES ARRAY   #
 #----------------#
-sims_per_val = 1000
+sims_per_val = 5000
 # Get left and right values from data
 values_array_addm = utils_addm.values_for_simulation_addm(expdata_file_name, sims_per_val)
 # Create num_sims var
@@ -93,7 +93,8 @@ with concurrent.futures.ProcessPoolExecutor() as executor:
 
 end = time.time()
 run_duration = end - start
-print(run_duration)
+run_duration = datetime.timedelta(seconds=run_duration)
+
 #-----------------#
 # SAVE FILES      #
 #-----------------#
@@ -106,7 +107,9 @@ utils_addm.pickle_save(path, "parameters.pickle", parameter_search_space)
 utils_addm.pickle_save(path, "input_vals.pickle", input_vals)
 # Save Run time
 f = open(path + "runtime.txt", 'w')
-f.write("Run time = " + str(run_duration))
-f.write("You ran {0} simulations for each value. Num sims variable = {1}. Maybe total number of simulations: {2}.".format(
-    sims_per_val, num_sims, values_array.shape[0]))
+f.write("Run time: " + str(run_duration))
+f.write("\n\nSimulations per value: " + str(sims_per_val))
+f.write("\nNum sims: " + str(num_sims))
+f.write("\nTotal number of simulations: " + str(values_array.shape[0]))
+f.close()
 f.close()
