@@ -14,4 +14,4 @@ module load anaconda3/5.2.0
 
 #export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-python $SCRATCH/01_MADE/scripts/01_run_sim.py
+python $SCRATCH/01_MADE/scripts/04_run_sim.py

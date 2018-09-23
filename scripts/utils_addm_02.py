@@ -696,7 +696,7 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
     lower = -1 * upper
     theta = parameters[2]              # discount on non-observed
 
-    print(f'Process {os.getpid()} simulating for parameters: scaling = {scaling}, boundary = {upper}, theta = {theta}')
+    # print(f'Process {os.getpid()} simulating for parameters: scaling = {scaling}, boundary = {upper}, theta = {theta}')
 
     #-----------------#
     # INIT VARS       #

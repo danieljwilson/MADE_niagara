@@ -2,8 +2,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH --time=11:00:00
-#SBATCH --job-name MADE_001
-#SBATCH --output=/scratch/c/chutcher/wilsodj/01_MADE/output/001_%j.txt
+#SBATCH --job-name MADE_003
+#SBATCH --output=/scratch/c/chutcher/wilsodj/01_MADE/output/003_%j.txt
 #SBATCH --mail-type FAIL
 #SBATCH --mail-user daniel.j.wilson@gmail.com
 
@@ -14,4 +14,4 @@ module load anaconda3/5.2.0
 
 #export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-python $SCRATCH/01_MADE/scripts/01_run_sim.py
+python $SCRATCH/01_MADE/scripts/02_run_sim.py

@@ -2,7 +2,7 @@ import sys
 import os
 import collections
 import time
-from datetime import datetime
+import datetime
 import multiprocessing
 import concurrent.futures
 import numpy as np
@@ -11,6 +11,25 @@ import pickle
 import utils_addm_02 as utils_addm        # for importing custom module
 
 
+#-----------------#
+# OUTPUT PATH     #
+#-----------------#
+script_num = "01"
+
+# Date
+now = datetime.datetime.now().strftime('%Y_%m_%d_%H%M/')
+# Version
+version = "003/"
+print(version + now)
+
+# Path
+path = "01_MADE/output/" + version + now
+progress_path = path + "progress/"
+# Make directory
+if not os.path.exists(path):
+    os.makedirs(path)
+    os.makedirs(progress_path)
+
 #-------------#
 # DATA FILES  #
 #-------------#
@@ -18,18 +37,6 @@ import utils_addm_02 as utils_addm        # for importing custom module
 expdata_file_name = "01_MADE/data/made_v2/expdata.csv"
 # Fixation Data
 fixations_file_name = "01_MADE/data/made_v2/fixations.csv"
-
-#-----------------#
-# OUTPUT PATH     #
-#-----------------#
-# Date
-now = datetime.now().strftime('%Y_%m_%d_%H%M/')
-# Version
-version = "002/"
-# Path
-path = "01_MADE/output/" + version + now
-# Make directory
-os.makedirs(path)
 
 #------------------#
 # aDDM PARAMETERS  #
@@ -46,10 +53,11 @@ parameter_search_space = {"drift_weight": drift_weight,
                           "upper_boundary": upper_boundary,
                           "theta": theta}
 
+
 #----------------#
 # VALUES ARRAY   #
 #----------------#
-sims_per_val = 5000
+sims_per_val = 1000
 # Get left and right values from data
 values_array_addm = utils_addm.values_for_simulation_addm(expdata_file_name, sims_per_val)
 # Create num_sims var
@@ -69,6 +77,10 @@ input_vals = utils_addm.Input_Values(
     s=0.1,                  # scaling factor (Ratcliff) (check if variance or SD)
 )
 
+# Calculate total number of simulations
+print('Total simulations to run: {0}'.format(
+    parameter_combos.shape[0] * values_array_addm.shape[1]))
+
 #-----------------#
 # FUNCTION TO MAP #
 #-----------------#
@@ -80,6 +92,10 @@ def rt_dist_sim(parameters):
     # Run simulations
     rtDist = utils_addm.simul_addm_rt_dist(parameters, input_vals, dwell_array)
 
+    # tracking which/how many files have been written
+    f = open(progress_path + str(time.time()) + ".txt", 'w')
+    f.write("Parameters: " + str(parameters))
+    f.close()
     return rtDist
 
 
@@ -100,16 +116,15 @@ run_duration = datetime.timedelta(seconds=run_duration)
 #-----------------#
 
 # Save RT dist file
-utils_addm.pickle_save(path, "rt_dist.pickle", rt_dist)
+utils_addm.pickle_save(path, "rt_dist_" + script_num + ".pickle", rt_dist)
 
 # Save parameters
 utils_addm.pickle_save(path, "parameters.pickle", parameter_search_space)
 utils_addm.pickle_save(path, "input_vals.pickle", input_vals)
 # Save Run time
-f = open(path + "runtime.txt", 'w')
+f = open(path + "runtime_" + script_num + ".txt", 'w')
 f.write("Run time: " + str(run_duration))
 f.write("\n\nSimulations per value: " + str(sims_per_val))
 f.write("\nNum sims: " + str(num_sims))
 f.write("\nTotal number of simulations: " + str(values_array.shape[0]))
-f.close()
 f.close()
