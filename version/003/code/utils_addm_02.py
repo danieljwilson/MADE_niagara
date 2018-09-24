@@ -867,7 +867,7 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
 
         y += 1
 
-    print(f'Finished processing parameters: scaling = {scaling}, boundary = {upper}, theta = {theta}')
+    # print(f'Finished processing parameters: scaling = {scaling}, boundary = {upper}, theta = {theta}')
 
     return(rtDist)
 

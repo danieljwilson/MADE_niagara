@@ -14,16 +14,17 @@ import utils_addm_02 as utils_addm        # for importing custom module
 #-----------------#
 # OUTPUT PATH     #
 #-----------------#
-script_num = "01"
+# Version
+version_num = "004/"
+# Which node
+script_num = "04"
 
 # Date
 now = datetime.datetime.now().strftime('%Y_%m_%d_%H%M/')
-# Version
-version = "003/"
-print(version + now)
+print(version_num + now)
 
 # Path
-path = "01_MADE/output/" + version + now
+path = "01_MADE/" + "version/" + version_num + "output/" + now
 progress_path = path + "progress/"
 # Make directory
 if not os.path.exists(path):
@@ -47,11 +48,14 @@ drift_weight = np.linspace(0.005, 0.15, 16)
 upper_boundary = np.linspace(0.05, 0.35, 16)
 # THETA VALUE
 theta = np.linspace(0.1, 1, 12)
-parameter_combos = utils_addm.parameter_values(drift_weight, upper_boundary, theta)
+# START BIAS VALUE
+sp_bias = np.linspace(-0.3, 0.3, 7)
+parameter_combos = utils_addm.parameter_values(drift_weight, upper_boundary, theta, sp_bias)
 # To save search space later
 parameter_search_space = {"drift_weight": drift_weight,
                           "upper_boundary": upper_boundary,
-                          "theta": theta}
+                          "theta": theta,
+                          "sp_bias": sp_bias}
 
 
 #----------------#
@@ -76,10 +80,6 @@ input_vals = utils_addm.Input_Values(
     precision=0.001,        # ms precision
     s=0.1,                  # scaling factor (Ratcliff) (check if variance or SD)
 )
-
-# Calculate total number of simulations
-print('Total simulations to run: {0}'.format(
-    parameter_combos.shape[0] * values_array_addm.shape[1]))
 
 #-----------------#
 # FUNCTION TO MAP #
@@ -126,5 +126,6 @@ f = open(path + "runtime_" + script_num + ".txt", 'w')
 f.write("Run time: " + str(run_duration))
 f.write("\n\nSimulations per value: " + str(sims_per_val))
 f.write("\nNum sims: " + str(num_sims))
-f.write("\nTotal number of simulations: " + str(values_array.shape[0]))
+f.write("\nTotal number of simulations: " +
+        str(parameter_combos.shape[0] * values_array_addm.shape[1]))
 f.close()
