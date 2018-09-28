@@ -19,6 +19,7 @@ import shelve
 # to overwrite the avg. loop time/remining time with each loop
 from IPython.display import clear_output
 import pickle                               # for saving to pickle
+import copy                                 # for deepcopy
 import glob
 # from tqdm import tqdm                       # for keeping track of progress
 import collections
@@ -816,6 +817,7 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
     df['scaling'] = scaling
     df['upper_boundary'] = upper
     df['theta'] = theta
+    df['sp_bias'] = sp_bias
 
     # add correct column?
     df = df.dropna()                          # get rid of sims that didn't terminate
@@ -838,9 +840,10 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
     value_pairs = np.transpose(np.unique(input_vals.values_array, axis=1)
                                )   # transposing to get rows of value pairs
 
-    # Name for outer dict based on the weight, boundary and theta, with an integer (as STRING) leading
+    # Name for outer dict based on parameters, with an integer (as STRING) leading
     extracted_parameters = str(round(scaling, 3)) + '_' + \
-        str(round(upper, 3)) + '_' + str(round(theta, 3))
+        str(round(upper, 3)) + '_' + str(round(theta, 3)) + '_' + \
+        str(round(sp_bias, 3))
     # Create dict to hold values
     rtDist[extracted_parameters] = {}
 
@@ -878,6 +881,36 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
 #-------------------#
 # FITTING           #
 #-------------------#
+
+
+def rt_dists_mean(rt_path, rt_dists):
+    """
+    """
+    # Load rt_dists
+    dfs = {}
+    for i in range(0, len(rt_dists)):
+        dfs[i] = pickle.load(open(rt_path + rt_dists[i] + ".pickle", "rb"))
+
+    # Deep copy - this will be modified with the mean of all rt_dists
+    rt_full = copy.deepcopy(dfs[0])
+
+    # Get mean values of rt_dists and save to rt_full
+    i = 0
+    while i < len(rt_full):                      # going through one set of paramaters at a time
+        for param_combo in rt_full[i].keys():    # this is pulling out the actual paramter values
+            # this is pulling out the value combo (left and right)
+            for value in rt_full[i][param_combo]:
+                # initialize summed_value with first rt_dist
+                summed_rt_dist = dfs[0][i][param_combo][value]
+                for j in range(1, len(rt_dists)):              # iterate through rest of rt_dists to combine
+                    summed_rt_dist = summed_rt_dist + dfs[j][i][param_combo][value]
+                rt_full[i][param_combo][value] = summed_rt_dist / \
+                    len(rt_dists)    # divide to get mean
+        i += 1
+    # don't need dfs anymore
+    del(dfs)
+
+    return rt_full
 
 
 def combine_sims(input_filepath, output_filepath):
