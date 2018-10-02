@@ -889,6 +889,7 @@ def rt_dists_mean(rt_path, rt_dists):
     # Load rt_dists
     dfs = {}
     for i in range(0, len(rt_dists)):
+        print('Loading rt dist {0}...'.format(i))
         dfs[i] = pickle.load(open(rt_path + rt_dists[i] + ".pickle", "rb"))
 
     # Deep copy - this will be modified with the mean of all rt_dists
