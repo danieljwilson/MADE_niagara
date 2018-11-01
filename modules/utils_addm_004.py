@@ -23,6 +23,8 @@ import copy                                 # for deepcopy
 import glob
 # from tqdm import tqdm                       # for keeping track of progress
 import collections
+import scipy.stats
+from itertools import repeat                    # for additional values in map function
 
 
 Input_Values = collections.namedtuple('Input_Values', [
@@ -680,11 +682,11 @@ def save_to_df(rt, resp, drift_left, drift_right, values_array_addm, scaling, up
 # MAP VERSION FOR PARALLEL   #
 #----------------------------#
 
-def simul_addm_rt_dist(parameters, input_vals, dwell_array):
+def simul_addm_rt_dist(parameters, input_vals, dwell_array, dist_type):
     """
 
     Args:
-        data: str, are we creating simulation disribution or simulating from test data
+        dist_type (str): can be either 'percent' or 'count'
     """
 
     t = 0                                                   # initialize time to zero
@@ -861,13 +863,19 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
         count1, bins = np.histogram(data1.rt, bins)  	# unpack the accept counts in each bin
 
         length = float(sum(count0) + sum(count1))    	# number of non NaN values
-        print("length: {0}".format(length))
 
         # initialize array to hold Distribs
         distrib = np.ndarray((len(count0), 3))
-        distrib[:, 0] = binz                      		# bin values from START of bin
-        distrib[:, 1] = count0 / length              		# reject
-        distrib[:, 2] = count1 / length              		# accept
+
+        if dist_type == "percent":                          # for sim distributions
+            distrib[:, 0] = binz                      		# bin values from START of bin
+            distrib[:, 1] = count0 / length              	# reject
+            distrib[:, 2] = count1 / length              	# accept
+
+        elif dist_type == "count":                          # for sim subjects
+            distrib[:, 0] = binz                      	    # bin values from START of bin
+            distrib[:, 1] = count0              		    # reject
+            distrib[:, 2] = count1              		    # accept
 
         # create dict key based on value pair
         vp = str(x[0]) + '_' + str(x[1])
@@ -886,7 +894,21 @@ def simul_addm_rt_dist(parameters, input_vals, dwell_array):
 
 
 def rt_dists_mean(rt_path, rt_dists):
-    """
+    """Combine RT distributions that have been created across nodes.
+
+    Args:
+        rt_path (str): Path and the common part of the file name, e.g. "/gpfs/fs0/scratch/c/chutcher/wilsodj/01_MADE/version/004/output/2018_09_28_0006/rt_dist_"
+        rt_dists (list): All simulated distributions to be combined, e.g. ['01', '02', '03']
+
+    Returns:
+        tuple: a nested dict, access by rtdist[i][parameter_combo][value_combo], where 'i' is an int from [0,len(rtdist)]
+
+    Example:
+        # Usage
+        combined_rt_dist = utils_addm.rt_dists_mean(rt_path, rt_dists)
+
+        # Saving
+        utils_addm.pickle_save(rt_path, "combined.pickle", combined_rt_dist)
     """
     # Load rt_dists
     dfs = {}
@@ -914,6 +936,83 @@ def rt_dists_mean(rt_path, rt_dists):
     del(dfs)
 
     return rt_full
+
+
+def zero_to_eps(rt_dist):
+    """
+    Convert zeros to epsilon to avoid inf in log
+
+    Args:
+        rt_dist (tuple): tuple of dicts of all simulated rt proportions
+    """
+    epsilon = np.finfo(float).eps
+
+    for i in range(len(rt_dist)):
+        for param_combo in rt_dist[i]:
+            for value in rt_dist[i][param_combo]:
+                rt_dist[i][param_combo][value][rt_dist[i][param_combo][value] == 0] = epsilon
+
+    return(rt_dist)
+
+
+def fit_subject(i, sub_sims, rt_dist):
+    # track which subjects are being processed
+    print(f'Process {os.getpid()} working on subject {i}')
+    # for i in range(len(sub_sims)):
+    for subject in sub_sims[i]:      # single subject
+        # init dataframe for storing fits (maybe better with dict?? Can this be stored in tuple??)
+        fit_df = pd.DataFrame(index=range(len(rt_dist)), columns=[
+                              'drift', 'boundary', 'theta', 'sp_bias', 'NLL'])
+        fit_df = fit_df.fillna(0)  # with 0s rather than NaNs
+        p_count = 0   # for inserting the NLL in correct spot in dataframe
+
+        for j in range(len(rt_dist)):
+
+            for params in rt_dist[j]:    # test on each parameter combination
+                nll_fit = 0              # initialize the NLL to zero to start each param combo test
+
+                # walk through the response (choice/RT) for each value combo
+                for value in sub_sims[i][subject]:
+                    # check fit between subject response and simulated paramter response rates...
+                    nll_fit = nll_fit + \
+                        np.nansum((sub_sims[i][subject][value][:, 1:3]) *
+                                  nll(rt_dist[j][params][value][:, 1:3]))
+
+                # pulling out parameters from string and converting to numeric
+                drift, boundary, theta, sp_bias = list(map(float, params.split('_')))
+                # add to df
+                fit_df.iloc[p_count] = drift, boundary, theta, sp_bias, nll_fit
+                # augment counter to add to next row
+                p_count += 1
+        # sort df
+        fit_df = fit_df.sort_values(by=['NLL'])
+        # if you don't need to see all the fits you could uncomment the code below
+        # fit_df = np.sum((fit_df.iloc[:20,0:4].T * weighted_fit_points).T) / np.sum(weighted_fit_points)
+
+    return(fit_df)
+
+
+def calc_best_fit_ps(NLL):
+
+    fit_points = np.linspace(0., 3., num=20)
+    # Weight each fit by position using a normal dist
+    weighted_fit_points = scipy.stats.norm(0, 1).pdf(fit_points)
+    # Calculated the weighted mean of the first 20 (or whatever you set it to) fits
+    best_fit = np.sum((NLL.iloc[:20, 0:4].T * weighted_fit_points).T) / \
+        np.sum(weighted_fit_points)
+    return(best_fit)
+
+
+# HELPER FUNCTIONS (BELOW)
+
+
+def nll(x):
+    """Take negative log likelihood of number
+    """
+    x = -2 * np.log(x)
+    return (x)
+
+# HELPER FUNCTIONS (ABOVE)
 
 
 def combine_sims(input_filepath, output_filepath):
@@ -1004,14 +1103,13 @@ def rtDistFunc(nonDec, values_array, path_to_save):
 
 
 def fit_sim_subjects(subject_dict, rt_dist, nonDec, path_to_save):
-    """
-    Fits individual subjects, finding the negative log liklihood of each paramter combo.
+    """Fits individual subjects, finding the negative log liklihood of each paramter combo.
 
     Args:
-        subject_dict: pickled dict, value combos, rts and choices for subjects
-        rt_dist: pickled dict, simulated distributions for parameter combos and values
-        nonDec: float, non decision time as added to rts
-        path_to_save: str, where the output pickle file will be stored
+        subject_dict (pickled dict): value combos, rts and choices for subjects
+        rt_dist (pickled dict): simulated distributions for parameter combos and values
+        nonDec (float): non decision time as added to rts
+        path_to_save (str): where the output pickle file will be stored
     """
 
     # create dict to store fitted subjects

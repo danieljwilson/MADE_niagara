@@ -8,7 +8,7 @@ import utils_addm_02 as utils_addm        # for importing custom module
 # COMBINE DICTS   #
 #-----------------#
 
-# Running from $SCRATCH server
+# Running from $SCRATCH server: this is the path and the common part of the file name
 rt_path = "/gpfs/fs0/scratch/c/chutcher/wilsodj/01_MADE/version/004/output/2018_09_28_0006/rt_dist_"
 
 # List of the simulated distributions, e.g. ['01', '02', '03']
