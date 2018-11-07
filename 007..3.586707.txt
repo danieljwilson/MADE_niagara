@@ -1,0 +1,3 @@
+007/2018_11_07_03_01a_sim
+Your parameter search space is size: (21504, 4).
+You will run 1000 simulations for each of 81 value combinations for a total of 81000 simulations.

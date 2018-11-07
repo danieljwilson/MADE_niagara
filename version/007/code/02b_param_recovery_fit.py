@@ -1,5 +1,5 @@
 #---------------------#
-# PARAMTER RECOVERY   #
+# PARAMETER RECOVERY  #
 #---------------------#
 
 import sys
@@ -15,7 +15,6 @@ import pickle
 import copy
 sys.path.append('/scratch/c/chutcher/wilsodj/MADE/')
 import modules.utils_addm_005 as utils_addm     # for importing custom module
-from itertools import repeat                    # for additional values in map function
 
 """Fit subjects to RT dist (MLE)
 
@@ -25,11 +24,11 @@ from itertools import repeat                    # for additional values in map f
 # LOAD FILES  #
 #-------------#
 # RT dist
-path_to_rt_dist = "MADE/version/004/output/2018_09_28_0006/rt_dist_combined.pickle"
+path_to_rt_dist =  # "MADE/version/.../rt_dist_combined.pickle"
 rt_dist = pickle.load(open(path_to_rt_dist, "rb"))
 print("loaded rt dists...")
 # Sim Subjects
-path_to_sub_sims = "MADE/version/004/output/2018_11_01_1513/rt_dist_param_recovery.pickle"
+path_to_sub_sims =  # "MADE/version/.../rt_dist_param_recovery.pickle"
 sub_sims = pickle.load(open(path_to_sub_sims, "rb"))
 print("loaded sim subjects...")
 
@@ -84,6 +83,11 @@ def fit_subject(i):
                 p_count += 1
         # sort df
         fit_df = fit_df.sort_values(by=['NLL'])
+        # reset index
+        fit_df = fit_df.reset_index(drop=True)
+        # reduce size (don't need worst parameter fits)
+        fit_df = fit_df.drop(df.index[0:50])
+
         # if you don't need to see all the fits you could uncomment the code below
         # fit_df = np.sum((fit_df.iloc[:20,0:4].T * weighted_fit_points).T) / np.sum(weighted_fit_points)
 
@@ -109,13 +113,8 @@ utils_addm.pickle_save(path_to_sub_sims, "p_recov_fits_full" + ".pickle", NLL)
 # CALCULATE BEST PARAMETERS  #
 #----------------------------#
 print('calculating best fits...')
-# Averaging over the top 20
 with concurrent.futures.ProcessPoolExecutor() as executor:
     subject_fits = tuple(executor.map(utils_addm.calc_best_fit_ps, NLL))
-# Just the single best
-with concurrent.futures.ProcessPoolExecutor() as executor:
-    subject_fits_best = tuple(executor.map(utils_addm.calc_best_fit_1, NLL))
 
 # Save RT dist file
 utils_addm.pickle_save(path_to_sub_sims, "p_recov_fits_best" + ".pickle", subject_fits)
-utils_addm.pickle_save(path_to_sub_sims, "p_recov_fits_best_1" + ".pickle", subject_fits_best)

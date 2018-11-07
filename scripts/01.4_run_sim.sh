@@ -2,8 +2,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH --time=11:00:00
-#SBATCH --job-name MADE_004
-#SBATCH --output=/scratch/c/chutcher/wilsodj/MADE/004_%j.txt
+#SBATCH --job-name MADE_005_1.4
+#SBATCH --output=/scratch/c/chutcher/wilsodj/MADE/005_1.4_%j.txt
 #SBATCH --mail-type FAIL
 #SBATCH --mail-user daniel.j.wilson@gmail.com
 
@@ -16,4 +16,4 @@ module load anaconda3/5.2.0
 # This is input in command line at the end in single quotes (e.g. '003')
 VERSION=$1
 
-python $SCRATCH/MADE/version/$VERSION/code/01b_sim_combine.py
+python $SCRATCH/MADE/version/$VERSION/code/01.4_sim.py
