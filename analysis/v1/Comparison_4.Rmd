@@ -1,0 +1,293 @@
+---
+title: "Comparison of all Four"
+output: html_notebook
+---
+
+## CLEANUP
+```{r cleanup}
+# removes all variables but NOT functions
+rm(list = setdiff(ls(), lsf.str()))
+```
+
+## LOAD LIBRARIES
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = FALSE)
+library(magrittr)
+library(ggplot2)
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(tidyr)
+library(merTools) 
+library(lsr)
+library(reshape2)
+library(dtplyr)
+library(data.table)
+```
+
+## LOAD DATA
+```{r dataframe}
+
+# STANDARD
+load("../Data/NS_NM.Rdata")
+load("../Data/NS_M.Rdata")
+
+study2 <- data.frame("subject" = NS_M$subject, "accuracy" = NS_M$accuracy)
+study2a <- data.frame("subject" = NS_NM$subject, "accuracy" = NS_NM$accuracy)
+
+study <- rbind(study2, study2a)
+## ** THERE ARE NOW CLEANED RData Files ** load("Data/NS_M.Rdata")
+
+# SWAP
+load("../Data/S_M.Rdata")
+load("../Data/S_NM.Rdata")
+```
+
+# PLOT FIRST/MIDDLE/LAST FIX RT DISTS
+```{r}
+# Load Krajbich Data
+load("~/pCloud Drive/pCloud Synced/PhD/PROJECTS/2017_MADE/03_CODE/2017_MADE/Analysis/Data/S_M_K.Rdata")
+d <- S_M_K
+# First Fixation
+first_fix = d$fixDur[d$fixNum ==1]
+hist(first_fix, breaks = 40)
+mx = median(first_fix)
+lines( c(mx,mx), c(0,1200), col = "red", lwd = 2)
+text(mx, 18 , round(mx, 2))
+sd(first_fix)
+
+# Middle Fixations
+middle_fix = d$fixDur[d$fixNum>1 & d$revFixNum>1]
+hist(middle_fix, breaks = 40)
+mx = median(middle_fix)
+lines( c(mx,mx), c(0,1200), col = "red", lwd = 2)
+text(mx, 18 , round(mx, 2))
+sd(middle_fix)
+
+# Last Fixations
+last_fix = d$fixDur[d$revFixNum ==1]
+hist(last_fix, breaks = 40)
+mx = median(last_fix)
+lines( c(mx,mx), c(0,1200), col = "red", lwd = 2)
+text(mx, 18 , round(mx, 2))
+sd(last_fix)
+```
+
+# CHECK HOW FIRST/MIDDLE/LAST FIX RT DURATION TRACK WITH VALUE (GROUP AND SUBJECT)
+```{r}
+# Remember FACE is coded as 0, HOUSE as 1 (for ROI)
+
+# Make columns for: ROI Value, ROI base value and ROI mult 
+
+S_M_K$roi_val = S_M_K$totValFace
+S_M_K$roi_mult = S_M_K$multFace
+S_M_K$roi_base_val = S_M_K$faceVal
+
+for (i in 1:length(S_M_K$subject)){
+  if (S_M_K$roi[i] == 1){
+    S_M_K$roi_val[i] = abs(S_M_K$totValHouse[i])
+    S_M_K$roi_mult[i] = S_M_K$multHouse[i]
+    S_M_K$roi_base_val[i] = abs(S_M_K$houseVal[i])
+  }
+}
+
+# Make dataframe to manipulate
+d <- S_M_K
+
+# Separate by fixation
+d_first_fix <- d[d$fixNum==1,]
+d_middle_fix <- d[(d$fixNum>1 & d$revFixNum>1),]
+
+tbl_dt(d_first_fix)[, .(beta = coef(summary(lm(fixDur ~ roi_val)))[2], p = coef(summary(lm(fixDur ~ roi_val)))[8]), by = subject]
+tbl_dt(d_middle_fix)[, .(beta = coef(summary(lm(fixDur ~ roi_val)))[2], p = coef(summary(lm(fixDur ~ roi_val)))[8]), by = subject]
+
+summary(lm(fixDur ~ roi_val*factor(roi_mult), data = d_middle_fix))
+
+library(lme4)
+library(sjPlot)
+
+# fit model
+fit <- lmer(fixDur ~ roi_val + (roi_val | subject), d)
+fit <- lmer(fixDur ~ roi_base_val + (fixDur | subject), d)
+
+sjp.lmer(fit,
+         facet.grid = FALSE,
+         sort.est = "sort.all",
+         y.offset = .4)
+
+# prepare group variable
+efc$grp = as.factor(efc$e15relat)
+levels(x = efc$grp) <- get_labels(efc$e15relat)
+# data frame for fitted model
+mydf <- data.frame(neg_c_7 = efc$neg_c_7,
+                   sex = to_factor(efc$c161sex),
+                   c12hour = efc$c12hour,
+                   barthel = efc$barthtot,
+                   grp = efc$grp)
+#ctrl <- lmeControl(opt='optim');
+am2 <- lmer(fixDur ~ roi_val, random = ~1+roi_val|subject, data=d)
+summary(am2)
+
+```
+
+```{r}
+Pilot <- read.csv("Data/NS_M_Pilot.csv")
+
+subject_means <- group_by(study, subject) %>%
+  dplyr::summarize(accuracy = mean(accuracy, na.rm = T))
+
+mean(subject_means$accuracy)
+sd(subject_means$accuracy)
+```
+
+## CLEAN DATA
+```{r Clean Data}
+##############
+# Clean Data
+##############
+NS_M <- read.csv("Data/NS_M_raw.csv")
+
+# Remove reactions faster than .2 seconds
+# https://www.humanbenchmark.com/tests/reactiontime/statistics
+NS_NM<- NS_NM[!(NS_NM$rt<0.2),]
+NS_M<- NS_M[!(NS_M$rt<0.2),]
+
+#remove earnings below 0
+NS_NM <- NS_NM[!(NS_NM$finalEarnings<0),]
+NS_M <- NS_M[!(NS_M$finalEarnings<0),]
+
+#MORE AGRESSIVE: REMOVE BELOW 70% (removes 3 additional people)
+NS_NM <- NS_NM[!(NS_NM$accuracy<0.70),]
+NS_M <- NS_M[!(NS_M$accuracy<0.70),]
+
+# Remove outlier (mainly slow) reactions using MAD
+# https://rpubs.com/hauselin/outliersDetect
+# https://www.r-bloggers.com/absolute-deviation-around-the-median/
+  
+outliersMAD <- function(data, MADCutOff = 2.5, replace = NA, values = FALSE, bConstant = 1.4826, digits = 2) {
+  #compute number of absolute MADs away for each value
+  #formula: abs( ( x - median(x) ) )/ mad(x)
+  absMADAway <- abs((data - median(data, na.rm = T))/mad(data, constant = bConstant, na.rm = T))
+  #subset data that has absMADAway greater than the MADCutOff and replace them with replace
+  #can also replace values other than replace
+  data[absMADAway > MADCutOff] <- replace
+  
+  if (values == TRUE) { 
+    return(round(absMADAway, digits)) #if values == TRUE, return number of mads for each value
+  } else {
+    return(round(data, digits)) #otherwise, return values with outliers replaced
+  }
+}
+
+NS_NM <- NS_NM[!(outliersMAD(NS_NM$rt, values=T) > 5),]
+NS_M <- NS_M[!(outliersMAD(NS_M$rt, values=T) > 5),]
+```
+
+## KNIT Data into single DF
+```{r}
+# Create ID for each DF
+NS_M$id <- "Standard Mult."
+NS_NM$id <- "Standard Non-Mult"
+S_M$id <- "Swap Mult."
+S_NM$id <- "Swap Non-Mult"
+
+# Concat DFs
+common_cols <- intersect(colnames(S_M), colnames(S_NM))
+df1 = rbind(
+  S_NM[, common_cols], 
+  S_M[, common_cols]
+)
+
+common_cols <- intersect(colnames(NS_NM), colnames(NS_M))
+df2 = rbind(
+  NS_NM[, common_cols], 
+  NS_M[, common_cols]
+)
+
+common_cols <- intersect(colnames(df1), colnames(df2))
+df_all = rbind(
+  df1[, common_cols],
+  df2[, common_cols]
+)
+
+common_cols <- intersect(colnames(S_M), colnames(NS_M))
+df_mults = rbind(
+  S_M[, common_cols],
+  NS_M[, common_cols]
+)
+
+# Make DF ID Factor
+df_mults$id <- as.factor(df_mults$id)
+```
+
+
+## RT vs VALUE by paradigm
+```{r}
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=summedVal, y=correct, group = factor(id), colour = factor(id)), df_mults) +
+  #geom_smooth(aes(x=summedVal, y=correct, colour = "flip"), subset(total_M_clean3, flip==1)) +
+  coord_cartesian(xlim = c(-3, 3))  +
+  scale_x_continuous(name="Net Value ($)", seq(-3,3,0.5), limits = c(-3,3))+
+  scale_y_continuous(name = "Accuracy") +
+  scale_color_manual(labels = c("Secondary", "Primary"), values = c("blue", "red")) +
+  #guides(colour=guide_legend("Study")) +
+  ggtitle("A") +
+  theme_minimal()+
+  theme(legend.position="none")
+  
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()  # Add a loess smoothed fit curve with confidence region
+```
+
+## ACCURACY vs VALUE by paradigm
+```{r}
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=summedVal, y=rt, group = factor(id), colour = factor(id)), df_mults) +
+  #geom_smooth(aes(x=summedVal, y=correct, colour = "flip"), subset(total_M_clean3, flip==1)) +
+  coord_cartesian(xlim = c(-3, 3))  +
+  scale_x_continuous(name="Net Value ($)", seq(-3,3,0.5), limits = c(-3,3))+
+  scale_y_continuous(name = "Reaction Time (s)") +
+  scale_color_manual(labels = c("Secondary", "Primary"), values = c("blue", "red")) +
+  guides(colour=guide_legend("Study")) +
+  ggtitle("B") +
+  theme_minimal()+
+  theme(legend.position="none")
+
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()  # Add a loess smoothed fit curve with confidence region
+```
+
+```{r}
+corr.test()
+```
+
+
+## SUMMARY STATS
+
+```{r}
+library(psych)
+tapply(df_mults$rt, df_mults$id, mean)
+
+describeBy(df_mults$rt, df_mults$id)
+
+```
+
+
+```{r}
+# Figure out histogram bin size, based on equal numbers of observations
+library(Hmisc) # cut2
+
+S_M$valBin <- as.numeric(cut2(S_M$summedVal, g=15))
+table(S_M$valBin)
+
+S_M$valBinAmt <- cut2(S_M$summedVal, g=15)
+table(S_M$valBinAmt)
+```
+
+```{r}
+df = mutate(S_M, cutmcsgg = cut_number(S_M$summedVal, n=15))
+ggplot(df, aes(x = cutmcsgg, y = )) + geom_bar() + ggtitle("Histograms of PCS by sextile of MCS")
+```
+

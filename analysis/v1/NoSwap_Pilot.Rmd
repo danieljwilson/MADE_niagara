@@ -1,0 +1,44 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+df_NM = read.csv("Data/NS_NM_Pilot.csv")
+df_M = read.csv("Data/NS_M_Pilot.csv")
+
+```
+
+### Mean rt and accuracy of pilot data (Non-Mult and Mult trials)
+```{r}
+mean(df_NM$rt)
+mean(df_NM$accuracy)
+
+mean(df_M$rt)
+mean(df_M$accuracy)
+min(df_M$accuracy)
+sd(df_M$accuracy)
+
+mean(df_M$finalEarnings)
+
+subject_means <- group_by(df_M, subject) %>%
+  dplyr::summarize(earnings = max(earnings, na.rm = T))
+mean(subject_means$earnings)
+subject_means
+```
+
+### Test to see likelihood someone scoring 70% came from pilot population
+```{r}
+
+load("Data/S_M_raw.Rdata")
+
+# Subject 4: 69/3% accuracy
+df_70 <- S_M_raw[(S_M_raw$subject == 4),]
+
+t.test(df_M$correct, df_70$correct)
+```
+

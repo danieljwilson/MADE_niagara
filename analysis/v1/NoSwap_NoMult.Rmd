@@ -1,0 +1,180 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+```{r cleanup}
+# removes all variables but NOT functions
+rm(list = setdiff(ls(), lsf.str()))
+```
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = FALSE)
+library(magrittr)
+library(ggplot2)
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(tidyr)
+library(merTools) 
+library(lsr)
+library(reshape2)
+```
+
+Mean RT/Accuracy, uncleaned
+```{r}
+df = read.csv('Data/NS_NM.csv')
+mean(df$rt)
+mean(df$accuracy)
+unique(df$subject)
+```
+
+Boxplot uncleaned data
+```{r RT-unfiltered, echo=TRUE}
+boxplot(rt ~ factor(subject),
+        varwidth = TRUE, xlab = "subject",
+        main = "Boxplot of RT conditional on\
+        subject", ylab = "RT", data = df)
+```
+
+```{r}
+#################
+# FUNCTION TO PULL DATA OUT OF LM
+#################
+
+ggplotRegression <- function (fit) {
+  require(ggplot2)
+  ggplot(fit$model, aes_string(x=names(fit$model)[2], y=names(fit$model)[1])) +
+    geom_point() +
+    stat_smooth(method = "lm", col = "red") +
+    ggtitle("Testing") +
+    labs(title = paste(title, "\n\nAdj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                       "Intercept =",signif(fit$coef[[1]], 5),
+                       "Slope =",signif(fit$coef[[2]], 5),
+                       "P =",signif(summary(fit)$coef[2,4], 5)))
+}
+
+d <- df
+d$correct = as.numeric(d$correct) - 1 #make accuracy numeric
+
+#mean RT and Final earnings by subject
+subject_means <- group_by(d, subject) %>%
+  dplyr::summarize(rt = mean(rt, na.rm = T), finalEarnings = mean(finalEarnings, na.rm = T))
+
+title = "Earnings as related to Mean RT"
+ggplotRegression(lm(finalEarnings~rt, data = subject_means))
+
+#mean RT and Accuracy by subject
+subject_means <- group_by(d, subject) %>%
+  dplyr::summarize(finalEarnings = mean(finalEarnings, na.rm = T), accuracy = mean(as.numeric(correct), na.rm = T))
+
+title = "Earnings as related to % Correct"
+ggplotRegression(lm(finalEarnings~accuracy, data = subject_means))
+```
+
+
+CLEAN DATA
+```{r Clean Data}
+##############
+# Clean Data
+##############
+length(unique(df$subject))
+
+# Remove reactions faster than .2 seconds
+# https://www.humanbenchmark.com/tests/reactiontime/statistics
+df<- df[!(df$rt<0.2),]
+
+#remove earnings below 0
+df <- df[!(df$finalEarnings<0),]
+
+#MORE AGRESSIVE: REMOVE BELOW 70% (removes 3 additional people)
+df <- df[!(df$accuracy<0.70),]
+length(unique(df$subject))
+
+
+# Remove outlier (mainly slow) reactions using MAD
+# https://rpubs.com/hauselin/outliersDetect
+# https://www.r-bloggers.com/absolute-deviation-around-the-median/
+  
+outliersMAD <- function(data, MADCutOff = 2.5, replace = NA, values = FALSE, bConstant = 1.4826, digits = 2) {
+  #compute number of absolute MADs away for each value
+  #formula: abs( ( x - median(x) ) )/ mad(x)
+  absMADAway <- abs((data - median(data, na.rm = T))/mad(data, constant = bConstant, na.rm = T))
+  #subset data that has absMADAway greater than the MADCutOff and replace them with replace
+  #can also replace values other than replace
+  data[absMADAway > MADCutOff] <- replace
+  
+  if (values == TRUE) { 
+    return(round(absMADAway, digits)) #if values == TRUE, return number of mads for each value
+  } else {
+    return(round(data, digits)) #otherwise, return values with outliers replaced
+  }
+}
+
+df <- df[!(outliersMAD(df$rt, values=T) > 5),]
+
+max(df$rt)
+
+```
+###RT & Accuracy Cleaned Data
+```{r}
+mean(df$rt)
+mean(df$accuracy)
+```
+
+
+###Boxplot Cleaned data
+```{r RT-cleaned, echo=TRUE}
+boxplot(rt ~ factor(subject),
+        varwidth = TRUE, xlab = "subject",
+        main = "Boxplot of RT conditional on\
+        subject", ylab = "RT", data = df)
+```
+
+First/Second 50 mean: Total
+```{r}
+# First 50
+print.noquote("First 50")
+a = mean(df$rt[df$Trial>0 && df$Trial<51])
+b = mean(df$correct[df$Trial>0 && df$Trial<51])
+print(paste0("mean rt: ", a))
+print(paste0("mean accuracy: ", b))
+
+
+# Second 50
+print.noquote("Second 50")
+a = mean(df$rt[df$Trial>50])
+b = mean(df$correct[df$Trial>50])
+print(paste0("mean rt: ", a))
+print(paste0("mean accuracy: ", b))
+
+# Faster RT
+t.test(df$rt[df$Trial>0 && df$Trial<51], df$rt[df$Trial>50])
+# Same accuracy
+t.test((df$correct[df$Trial>0 && df$Trial<51]), (df$correct[df$Trial>50]))
+```
+
+First/Second 50 mean rt: By Subject
+```{r}
+d <- df
+
+# mean rt and accuracy by subject
+subject_means <- group_by(d, subject) %>%
+  dplyr::summarize(rtFirst50 = mean(rt[Trial>0 && Trial<51], na.rm = T),
+                   accFirst50 = mean(correct[Trial>0 && Trial<51], na.rm = T),
+                   rtSecond50 = mean(rt[Trial>50], na.rm = T), 
+                   accSecond50 = mean(correct[Trial>50], na.rm = T))
+
+subject_means
+
+# which(subject_means[subject_means$rtFirst50 > subject_means$rtSecond50])
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
+

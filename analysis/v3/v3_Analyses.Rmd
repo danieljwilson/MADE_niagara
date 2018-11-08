@@ -1,0 +1,288 @@
+---
+title: "V3_Analyses"
+author: "Daniel J Wilson"
+date: "1/16/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(tidyr)
+library(merTools) 
+library(lsr)
+library(reshape2)
+library(dtplyr)
+library(data.table)
+```
+
+
+## Import Data
+```{r}
+# removes all variables but NOT functions
+rm(list = setdiff(ls(), lsf.str()))
+
+load("~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v3_clean.Rdata")
+#load("~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v4_learning.Rdata")
+```
+
+## Basic Psychometrics
+
+```{r}
+# Figure out histogram bin size, based on equal numbers of observations
+library(Hmisc) # cut2
+
+d <- v3_clean
+
+# How many bins?
+numBins = 19 # same as Krajbich
+
+# SUMMED VAL
+d$valBin <- as.numeric(cut2(d$summed_val, g=numBins))
+d$valBinAmt <- cut2(d$summed_val, g=numBins)
+d$valBinCtr <- cut2(d$summed_val, g=numBins, levels.mean=TRUE)
+vals = as.numeric(as.character(unique(d$valBinCtr)))
+vals = sort(vals)
+
+# FOR RT
+subject_means_rt <- group_by(d, participant, valBinCtr) %>%
+  dplyr::summarize(rt = mean(rt, na.rm = T))
+subject_means_rt
+
+# FOR ACCURACY
+subject_means_acc <- group_by(d, participant, valBinCtr) %>%
+  dplyr::summarize(correct = mean(correct, na.rm = T))
+subject_means_acc
+
+# FOR CHOICE
+subject_means_choice <- group_by(d, participant, valBinCtr) %>%
+  dplyr::summarize(accept = mean(choice, na.rm = T))
+subject_means_choice
+
+# Create DF with all bins as columns
+# FOR RT
+subject_means_wide_rt <-
+  spread(subject_means_rt,
+         key = valBinCtr,
+         value = rt,
+         sep = "_")
+
+# FOR ACCURACY
+subject_means_wide_acc <-
+  spread(subject_means_acc,
+         key = valBinCtr,
+         value = correct,
+         sep = "_")
+
+# FOR CHOICE
+subject_means_wide_choice <-
+  spread(subject_means_choice,
+         key = valBinCtr,
+         value = accept,
+         sep = "_")
+
+# DF with mean and SD for each bin
+
+rt_x = sapply(subject_means_wide_rt, function(cl) list(means=mean(cl,na.rm=TRUE), sds=sd(cl,na.rm=TRUE)))
+rt_x = t(rt_x)
+acc_x = sapply(subject_means_wide_acc, function(cl) list(means=mean(cl,na.rm=TRUE), sds=sd(cl,na.rm=TRUE)))
+acc_x = t(acc_x)
+choice_x = sapply(subject_means_wide_choice, function(cl) list(means=mean(cl,na.rm=TRUE), sds=sd(cl,na.rm=TRUE)))
+choice_x = t(choice_x)
+
+# MEANs
+rt_mean = numeric()
+acc_mean = numeric()
+choice_mean = numeric()
+for(i in 2:20){
+  rt_mean = c(rt_mean, rt_x[i,1][[1]])
+  acc_mean = c(acc_mean, acc_x[i,1][[1]])
+  choice_mean = c(choice_mean, choice_x[i,1][[1]])
+}
+
+# SDs
+rt_sd = numeric()
+acc_sd = numeric()
+choice_sd = numeric()
+for(i in 2:20){
+  rt_sd = c(rt_sd, rt_x[i,2][[1]])
+  acc_sd = c(acc_sd, acc_x[i,2][[1]])
+  choice_sd = c(choice_sd, choice_x[i,2][[1]])
+}
+
+# Create DF
+df = data.frame("val" = vals,
+                "rt_mean" = rt_mean, "rt_sd" = rt_sd,
+                "acc_mean" = acc_mean, "acc_sd" = acc_sd,
+                "choice_mean" = choice_mean, "choice_sd" = choice_sd)
+
+# Add SEs
+nVal = sqrt(length(unique(d$participant))) # calculate the denominator of the SE equation
+df$rt_se <- df$rt_sd/nVal
+df$acc_se <- df$acc_sd/nVal
+df$choice_se <- df$choice_sd/nVal
+
+
+#-----------#
+# PLOT      # 
+#-----------#
+
+# RT
+ggplot(data = df,aes(x = val,y = rt_mean)) + 
+  geom_point() + 
+  #geom_line() +
+  geom_errorbar(aes(ymin = rt_mean-rt_se,ymax = rt_mean+rt_se)) + 
+  labs(x = "Net Value", y = "Reaction Time (seconds)") +
+  theme_minimal() +
+  ggtitle("Mean Reaction Time by Net Value")
+  
+# ACCURACY
+ggplot(data = df,aes(x = val,y = acc_mean)) + 
+  geom_point() + 
+  #geom_line() +
+  geom_errorbar(aes(ymin = acc_mean-acc_se, ymax = acc_mean+acc_se)) + 
+  labs(x = "Net Value", y = "p(Correct)") +
+  theme_minimal() +
+  ggtitle("B") +
+  theme(plot.title = element_text(size=22))
+#  ggtitle("p(Correct) by Net Value ")
+
+# CHOICE
+ggplot(data = df,aes(x = val,y = choice_mean)) + 
+  geom_point() + 
+  #geom_line() +
+  geom_errorbar(aes(ymin = choice_mean-choice_se, ymax = choice_mean+choice_se)) + 
+  labs(x = "Net Value", y = "p(Accept)") +
+  scale_x_continuous(breaks = seq(-3,3,0.5)) +
+  theme_minimal() +
+  theme(axis.title.x=element_text(size=17),
+        axis.title.y = element_text(size = 17))
+  #ggtitle("A") +
+  #theme(plot.title = element_text(size=22))
+```
+
+# Summed val vs. RT
+
+```{r}
+df <- v3_clean
+
+v3_clean$mult_num
+
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=summed_val, y=rt, group = factor(multNum), colour = factor(multNum)), df) +
+  #geom_smooth(aes(x=summedVal, y=rt, colour = "flip"), subset(df, flip==1)) +
+  coord_cartesian(xlim = c(-3, 3))  +
+  #ggtitle("RT vs. Summed Val")
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth() +  # Add a loess smoothed fit curve with confidence region
+  theme_minimal()+
+  guides(colour=guide_legend("Multiplier \nCondition")) +
+  scale_x_continuous(name="Net Value ($)", seq(-3,3,0.5), limits = c(-3,3))+
+  scale_y_continuous(name = "Reaction Time (s)")
+  
+
+#create multnum as factor
+df$multNumF = factor(df$multNum)
+#Test for SIG
+summary(lm(rt~summedVal + multNumF + flip, df))
+```
+# First Fixation vs Summed Value
+
+```{r}
+df <- v3_clean
+
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=summed_val, y=`1_fixation`, group = factor(first_mult), colour = factor(first_mult)), df) +
+  #geom_smooth(aes(x=summedVal, y=logRT, colour = "flip"), subset(total_M_clean3, flip==1)) +
+  coord_cartesian(xlim = c(-3, 3))  +
+  #ggtitle("Second Fixation vs Summed Value")
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()  +# Add a loess smoothed fit curve with confidence region
+  theme_minimal()+
+  guides(colour=guide_legend("Multiplier \nCondition")) +
+  scale_x_continuous(name="Trial Net Value ($)", seq(-3,3,0.5), limits = c(-3,3))+
+  scale_y_continuous(name = "Fixation Duration (s)")
+#Test for SIG
+summary(lm(`1_fixation`~summed_val + factor(first_mult), df))
+```
+
+# Second Fixation vs Second Value
+
+```{r}
+df <- v3_clean
+
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=second_val, y=`2_fixation`, group = factor(second_mult), colour = factor(second_mult)), df) +
+  #geom_smooth(aes(x=summedVal, y=logRT, colour = "flip"), subset(total_M_clean3, flip==1)) +
+  coord_cartesian(xlim = c(-3, 3))  +
+  #ggtitle("Second Fixation vs Summed Value")
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()  +# Add a loess smoothed fit curve with confidence region
+  theme_minimal()+
+  guides(colour=guide_legend("Multiplier \nCondition")) +
+  scale_x_continuous(name="Fixation Value ($)", seq(-3,3,0.5), limits = c(-3,3))+
+  scale_y_continuous(name = "Fixation Duration (s)")
+#Test for SIG
+summary(lm(`2_fixation`~second_val + factor(second_mult), df))
+```
+
+# First Fixation vs First Value (base)
+
+```{r}
+df <- v3_clean
+df$first_val_base <- df$first_val/df$first_mult
+
+
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=first_val_base, y=`1_fixation`, group = factor(first_mult), colour = factor(first_mult)), df) +
+  #geom_smooth(aes(x=summedVal, y=logRT, colour = "flip"), subset(total_M_clean3, flip==1)) +
+  coord_cartesian(xlim = c(-1, 1))  +
+  #ggtitle("Second Fixation vs Summed Value")
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()  +# Add a loess smoothed fit curve with confidence region
+  theme_minimal()+
+  guides(colour=guide_legend("Multiplier \nCondition")) +
+  scale_x_continuous(name="BASE Fixation Value ($)", seq(-3,3,0.5), limits = c(-1,1))+
+  scale_y_continuous(name = "Fixation Duration (s)")
+#Test for SIG
+summary(lm(`1_fixation`~first_val_base + factor(first_mult), df))
+```
+
+# Second Fixation vs Second Value (base)
+
+```{r}
+df <- v3_clean
+df$second_val_base <- df$second_val/df$second_mult
+
+
+#RT vs. Summed Value
+ggplot() +
+  geom_smooth(aes(x=second_val_base, y=`2_fixation`, group = factor(second_mult), colour = factor(second_mult)), df) +
+  #geom_smooth(aes(x=summedVal, y=logRT, colour = "flip"), subset(total_M_clean3, flip==1)) +
+  coord_cartesian(xlim = c(-1, 1))  +
+  #ggtitle("Second Fixation vs Summed Value")
+  #geom_point(shape=1) +    # Use hollow circles
+  geom_smooth()  +# Add a loess smoothed fit curve with confidence region
+  theme_minimal()+
+  guides(colour=guide_legend("Multiplier \nCondition")) +
+  scale_x_continuous(name="BASE Fixation Value ($)", seq(-3,3,0.5), limits = c(-1,1))+
+  scale_y_continuous(name = "Fixation Duration (s)")
+#Test for SIG
+summary(lm(`2_fixation`~second_val_base + factor(second_mult), df))
+```
+
+
+
+## Final fixation value/mult vs. duration
+```{r}
+
+```
+

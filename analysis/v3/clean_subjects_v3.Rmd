@@ -1,0 +1,134 @@
+---
+title: "Clean Subjects v3"
+output: html_notebook
+---
+
+## Import Data
+```{r}
+# removes all variables but NOT functions
+rm(list = setdiff(ls(), lsf.str()))
+
+load("../Data/v3_trials.Rdata")
+#load("~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v4_learning.Rdata")
+
+library(dplyr)
+library(lme4)
+library(ggplot2)
+library(diptest)
+```
+
+### Plot unfiltered subjects
+```{r}
+
+#################
+# FUNCTION TO PULL DATA OUT OF LM
+#################
+
+ggplotRegression <- function (fit) {
+  require(ggplot2)
+  ggplot(fit$model, aes_string(x=names(fit$model)[2], y=names(fit$model)[1])) +
+    geom_point() +
+    stat_smooth(method = "lm", col = "red") +
+    ggtitle("Testing") +
+    labs(title = paste(title, "\n\nAdj R2 = ",signif(summary(fit)$adj.r.squared, 5),
+                       "Intercept =",signif(fit$coef[[1]], 5),
+                       "Slope =",signif(fit$coef[[2]], 5),
+                       "P =",signif(summary(fit)$coef[2,4], 5)))
+}
+
+#################
+# INITIAL PLOTS
+#################
+
+#Select dataframe to use
+d <- v3_trials
+
+#mean RT and Final earnings by subject
+subject_means <- group_by(d, participant) %>%
+  dplyr::summarize(rt = mean(rt, na.rm = T), final_earnings = mean(final_earnings, na.rm = T),
+                   fix_num = mean(fix_num, na.rm = T), accuracy = mean(as.numeric(correct), na.rm = T))
+
+subject_means
+hist(subject_means$accuracy, breaks = 6)
+hist(subject_means$final_earnings, breaks = 6)
+
+subject_data <- subject_means$final_earnings
+data(subject_data)
+plot(density(subject_data))
+rug(subject_data, col="midnight blue"); abline(h=0, col="gray")
+dip(subject_data)
+(dS <- dip(subject_data, full = TRUE, debug = TRUE))
+plot(dS)
+
+
+#####
+# PLOTS NOT WORKING
+#####
+
+title = "Earnings as related to Mean RT"
+ggplotRegression(lm(final_earnings~rt, data = subject_means))
+
+#mean RT and Accuracy by subject
+subject_means <- group_by(d, participant) %>%
+  dplyr::summarize(final_earnings = mean(final_earnings, na.rm = T), accuracy = mean(as.numeric(correct), na.rm = T))
+
+title = "Earnings as related to % Correct"
+ggplotRegression(lm(final_earnings~accuracy, data = subject_means))
+
+#mean RT and Final earnings by subject
+subject_means2 <- group_by(d, participant) %>%
+  dplyr::summarize(fix_num = mean(fix_num, na.rm = T), final_earnings = mean(final_earnings, na.rm = T))
+
+title = "Earnings as related to Number of Image Swaps"
+ggplotRegression(lm(final_earnings~fix_num, data = subject_means2))
+```
+
+## Remove Bad Subjects and save for R and hDDM
+```{r}
+#remove swap avgs less than 1.5
+v3_trials <- v3_trials[!(v3_trials$fix_num<1.5),]
+
+#remove subjects with earnings under $100
+v3_clean <- v3_trials[!(v3_trials$final_earnings<100),]
+
+#remove subject 136 who only has one trial (maybe very slow rt)
+v3_clean <- v3_clean[!(v3_clean$participant==136),]
+length(unique(v3_clean$participant))
+
+# Add columns to match V1
+v3_clean$summedVal = v3_clean$summed_val
+v3_clean$subject = v3_clean$participant
+v3_clean$absSummedVal = abs(v3_clean$summed_val)
+v3_clean$swapAmount = v3_clean$fix_num
+v3_clean$firstMult = v3_clean$first_mult
+v3_clean$firstVal = v3_clean$first_val
+v3_clean$secondMult = v3_clean$second_mult
+v3_clean$secondVal = v3_clean$second_val
+v3_clean$faceTotal = v3_clean$face_val_total
+v3_clean$houseTotal = v3_clean$house_val_total
+v3_clean$total_0_face = v3_clean$total_fix_face_0
+v3_clean$total_1_house = v3_clean$total_fix_house_1
+
+# Save for R
+save(v3_clean, file = "../Data/v3_clean.Rdata")
+
+# save for HDDM
+v3_hddm<-v3_clean
+# delete lists
+v3_hddm$timings = NULL
+v3_hddm$image_sequence = NULL
+v3_hddm$accept_reject = NULL
+v3_hddm$fixation_timing = NULL
+
+write.csv(v3_hddm, file = "../hDDM/Data/CSV_data/v3_clean.csv") 
+```
+
+```{r}
+for (i in unique(v3_clean$participant)){
+  print(i)
+  print(length(v3_clean$trial[v3_clean$participant == i]))
+  print('--------')
+}
+```
+
+

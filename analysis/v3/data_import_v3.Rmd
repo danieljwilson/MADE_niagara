@@ -1,0 +1,203 @@
+---
+title: "data_import_v3"
+author: "Daniel J Wilson"
+date: "12/21/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## R Markdown
+
+## CLEANUP
+```{r cleanup}
+# removes all variables but NOT functions
+rm(list = setdiff(ls(), lsf.str()))
+```
+
+## IMPORT 
+File created in python from pydata object
+```{r imports}
+library()
+# data from psydat files
+v3 = read.csv('~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v3_trials.csv')
+
+v3$X = NULL
+```
+
+```{r manipulate dataframe}
+# convert timings as factor to timings2 as list
+for(x in 1:nrow(v3)){
+  test <- strsplit(as.character(v3$rt_list[x]), ", ")[[1]]
+  test<- gsub('\\[|\\]', '', test)
+  v3$timings[x] <- list(as.numeric(test))
+}
+
+# convert image_list as factor to imageSequence as list
+for(x in 1:nrow(v3)){
+  test <- strsplit(as.character(v3$image_list[x]), ", ")[[1]]
+  test<- gsub('\\[|\\]', '', test)
+  v3$image_sequence[x] <- list(as.numeric(test))
+}
+
+#column for individual FIXATION TIMINGS
+v3$fixation_timing = NULL
+list <- vector("list", 20)
+
+for(i in 1:nrow(v3)){
+  v3$fixation_timing[i] <- list
+}
+
+for(x in 1:nrow(v3)){
+  for(y in 1:lengths(v3$timings[x])){
+    if (y==1){
+      subVal <- v3$timings[x][[1]][1]
+      v3$fixation_timing[x][[1]][y] <- subVal
+    }
+    if (y>1){
+      subVal <- v3$timings[x][[1]][y] - v3$timings[x][[1]][y-1]
+      v3$fixation_timing[x][[1]][y] <- subVal
+    }
+  }
+}
+
+v3$total_fix_face_0 <- 0
+v3$total_fix_house_1 <- 0
+
+for(x in 1:nrow(v3)){
+  for(y in 1:lengths(v3$fixation_timing[x])){ #length of imageSequence is the same
+    #if the first image is 0
+    if (v3$image_sequence[x][[1]][1]==0){ 
+      if (y%%2 == 1){
+        #add the even images for total 0
+        v3$total_fix_face_0[x] <- v3$total_fix_face_0[x] + v3$fixation_timing[x][[1]][y] 
+      }
+      if (y%%2 == 0){
+        #add the odd images for total 1
+        v3$total_fix_house_1[x] <- v3$total_fix_house_1[x] + v3$fixation_timing[x][[1]][y] 
+      }
+    }
+    #if the first image is 1
+    if (v3$image_sequence[x][[1]][1]==1){ #if the first image is 0
+      if (y%%2 == 1){
+        #add the even images for total 0
+        v3$total_fix_house_1[x] <- v3$total_fix_house_1[x] + v3$fixation_timing[x][[1]][y] 
+      }
+      if (y%%2 == 0){
+        #add the odd images for total 1
+        v3$total_fix_face_0[x] <- v3$total_fix_face_0[x] + v3$fixation_timing[x][[1]][y] 
+      }
+    }
+  }
+}
+
+
+
+#Make row numbering sequential
+rownames(v3) <- 1:nrow(v3)
+
+#FINAL EARNINGS column
+v3$final_earnings = 0
+start = 1
+for (i in unique(v3$participant)){
+  start_val = start
+  stop_val = start + sum(v3$participant == i) - 1
+  v3$final_earnings[start_val:stop_val] = v3$earnings[stop_val]
+  start = stop_val + 1
+}
+
+#ABSOLUTE DIFFERENCE between the two values column
+v3$abs_diff <-abs(v3$face_val_total - v3$house_val_total)
+
+#new column with NUMBER OF SWAPS
+v3$fix_num <- lengths(v3$image_sequence)
+
+#create first_val column [face is 0, house is 1]
+for(x in 1:nrow(v3)){
+  if (v3$first_image[x] == 0){
+    v3$first_val[x] <- v3$face_val_total[x]
+  }
+  if (v3$first_image[x] == 1){
+    v3$first_val[x] <- v3$house_val_total[x]
+  }
+}
+
+#create second_val column [face is 0, house is 1 BUT since it is the second image it is the opposite]
+for(x in 1:nrow(v3)){
+  if (v3$first_image[x] == 1){
+    v3$second_val[x] <- v3$face_val_total[x]
+  }
+  if (v3$first_image[x] == 0){
+    v3$second_val[x] <- v3$house_val_total[x]
+  }
+}
+
+#create firstMult column [face is 0, house is 1]
+for(x in 1:nrow(v3)){
+  if (v3$first_image[x] == 0){
+    v3$first_mult[x] <- v3$face_mult[x]
+  }
+  if (v3$first_image[x] == 1){
+    v3$first_mult[x] <- v3$house_mult[x]
+  }
+}
+
+#create secondMult column (reverse the house/face values)
+for(x in 1:nrow(v3)){
+  if (v3$first_image[x] == 1){
+    v3$second_mult[x] <- v3$face_mult[x]
+  }
+  if (v3$first_image[x] == 0){
+    v3$second_mult[x] <- v3$house_mult[x]
+  }
+}
+
+# Fixation Timings
+max_num = max(v3$fix_num)
+for(i in 1:max_num){
+  for(x in 1:nrow(v3)){
+    v3[[paste0(i, "_fixation")]][x] <- v3$fixation_timing[x][[1]][i]
+  }
+}
+
+```
+
+## Clean Data
+
+```{r clean Echo = FALSE}
+
+outliersMAD <- function(data, MADCutOff = 2.5, replace = NA, values = FALSE, bConstant = 1.4826, digits = 2) {
+  #compute number of absolute MADs away for each value
+  #formula: abs( ( x - median(x) ) )/ mad(x)
+  absMADAway <- abs((data - median(data, na.rm = T))/mad(data, constant = bConstant, na.rm = T))
+  #subset data that has absMADAway greater than the MADCutOff and replace them with replace
+  #can also replace values other than replace
+  data[absMADAway > MADCutOff] <- replace
+  
+  if (values == TRUE) { 
+    return(round(absMADAway, digits)) #if values == TRUE, return number of mads for each value
+  } else {
+    return(round(data, digits)) #otherwise, return values with outliers replaced
+  }
+}
+
+v3 <- v3[!(outliersMAD(v3$rt, values=T) > 5),]
+
+max(v3$rt)
+length(v3$trial)
+
+#SAVE Rdata FILE
+#v4_learning <- clean_v4_learning
+#save(v3_learning, file = "~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v3_learning.Rdata")
+
+v3_trials <- v3
+save(v3_trials, file = "~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v3_trials.Rdata")
+```
+
+```{r load-data Echo=FALSE}
+load("~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v3_trials.Rdata")
+#load("~/Dropbox/PROGRAMMING/_NEURO/2017_MADE/Analysis/Data/v4_learning.Rdata")
+```
+
