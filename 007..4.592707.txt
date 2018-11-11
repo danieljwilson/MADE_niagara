@@ -1,0 +1,127 @@
+007/2018_11_08_14_01a_sim
+Your parameter search space is size: (21504, 4).
+You will run 500 simulations for each of 81 value combinations for a total of 40500 simulations.
+
+scontrol show jobid 592707
+JobId=592707 JobName=007..4
+   UserId=wilsodj(3060497) GroupId=chutcher(6007220) MCS_label=N/A
+   Priority=105655 Nice=0 Account=def-chutcher QOS=normal
+   JobState=COMPLETED Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=05:39:07 TimeLimit=11:45:00 TimeMin=N/A
+   SubmitTime=2018-11-07T22:06:34 EligibleTime=2018-11-07T22:06:34
+   StartTime=2018-11-08T14:58:41 EndTime=2018-11-08T20:37:48 Deadline=N/A
+   PreemptTime=None SuspendTime=None SecsPreSuspend=0
+   LastSchedEval=2018-11-08T14:58:41
+   Partition=compute AllocNode:Sid=nia-login02:318660
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=nia0482
+   BatchHost=nia0482
+   NumNodes=1 NumCPUs=80 NumTasks=40 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=80,node=1,billing=40
+   Socks/Node=* NtasksPerN:B:S:C=40:0:*:* CoreSpec=*
+   MinCPUsNode=40 MinMemoryNode=0 MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   Gres=(null) Reservation=(null)
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/gpfs/fs0/scratch/c/chutcher/wilsodj/MADE/scripts/jobscript.sh
+   WorkDir=/gpfs/fs0/scratch/c/chutcher/wilsodj
+   StdErr=/scratch/c/chutcher/wilsodj/MADE/007..4.592707.txt
+   StdIn=/dev/null
+   StdOut=/scratch/c/chutcher/wilsodj/MADE/007..4.592707.txt
+   Power=
+
+sacct -j 592707
+       JobID    JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+592707           007..4 def-chutc+   05:39:07                        29:06.147 18-15:59:+      0:0 
+592707.batch      batch def-chutc+   05:39:07  72260276K  17538996K  29:06.147 18-15:59:+      0:0 
+
+kernel messages produced during job executions:
+[Nov 8 18:45] CPU56: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU49: Core temperature above threshold, cpu clock throttled (total events = 1)
+[  +0.000001] CPU43: Package temperature above threshold, cpu clock throttled (total events = 12)
+[  +0.000002] CPU0: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU46: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU58: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU50: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU59: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU40: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU19: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU16: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU55: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU9: Core temperature above threshold, cpu clock throttled (total events = 1)
+[  +0.000001] CPU15: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU3: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU10: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU18: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU6: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU49: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU9: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000018] mce_notify_irq: 2 callbacks suppressed
+[  +0.000000] mce: [Hardware Error]: Machine check events logged
+[  +0.000010] CPU45: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU5: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU44: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU54: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU41: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU48: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU8: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU51: Package temperature above threshold, cpu clock throttled (total events = 11)
+[  +0.000001] CPU1: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU42: Package temperature above threshold, cpu clock throttled (total events = 12)
+[  +0.000001] CPU2: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU17: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU13: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU53: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU4: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU12: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU14: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU11: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000002] CPU7: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU47: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000012] CPU57: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000001] CPU52: Package temperature above threshold, cpu clock throttled (total events = 13)
+[  +0.000885] CPU0: Package temperature/speed normal
+[  +0.000001] CPU49: Core temperature/speed normal
+[  +0.000003] CPU55: Package temperature/speed normal
+[  +0.000001] CPU58: Package temperature/speed normal
+[  +0.000001] CPU47: Package temperature/speed normal
+[  +0.000000] CPU7: Package temperature/speed normal
+[  +0.000001] CPU59: Package temperature/speed normal
+[  +0.000001] CPU14: Package temperature/speed normal
+[  +0.000000] CPU54: Package temperature/speed normal
+[  +0.000002] CPU46: Package temperature/speed normal
+[  +0.000000] CPU6: Package temperature/speed normal
+[  +0.000001] CPU9: Core temperature/speed normal
+[  +0.000000] CPU1: Package temperature/speed normal
+[  +0.000001] CPU13: Package temperature/speed normal
+[  +0.000001] CPU53: Package temperature/speed normal
+[  +0.000000] CPU16: Package temperature/speed normal
+[  +0.000001] CPU41: Package temperature/speed normal
+[  +0.000001] CPU11: Package temperature/speed normal
+[  +0.000000] CPU19: Package temperature/speed normal
+[  +0.000002] CPU50: Package temperature/speed normal
+[  +0.000000] CPU48: Package temperature/speed normal
+[  +0.000001] CPU52: Package temperature/speed normal
+[  +0.000000] CPU12: Package temperature/speed normal
+[  +0.000001] CPU4: Package temperature/speed normal
+[  +0.000000] CPU44: Package temperature/speed normal
+[  +0.000002] CPU43: Package temperature/speed normal
+[  +0.000000] CPU40: Package temperature/speed normal
+[  +0.000001] CPU18: Package temperature/speed normal
+[  +0.000001] CPU3: Package temperature/speed normal
+[  +0.000000] CPU15: Package temperature/speed normal
+[  +0.000001] CPU2: Package temperature/speed normal
+[  +0.000001] CPU42: Package temperature/speed normal
+[  +0.000000] CPU45: Package temperature/speed normal
+[  +0.000001] CPU5: Package temperature/speed normal
+[  +0.000000] CPU8: Package temperature/speed normal
+[  +0.000001] CPU10: Package temperature/speed normal
+[  +0.000001] CPU51: Package temperature/speed normal
+[  +0.000001] CPU17: Package temperature/speed normal
+[  +0.000000] CPU57: Package temperature/speed normal
+[  +0.000001] CPU49: Package temperature/speed normal
+[  +0.000000] CPU9: Package temperature/speed normal
+[  +0.000001] mce: [Hardware Error]: Machine check events logged
+[  +0.695629] CPU56: Package temperature/speed normal

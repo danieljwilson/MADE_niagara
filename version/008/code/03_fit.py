@@ -8,33 +8,55 @@ import concurrent.futures
 import numpy as np
 import pandas as pd
 import pickle
-sys.path.append('/scratch/c/chutcher/wilsodj/MADE/')
-import modules.utils_addm_007 as utils_addm     # for importing custom module
+import copy
+import utils_addm_02 as utils_addm        # for importing custom module
+
+"""
+1. Separate data into train/test **later try cross validation**
+
+2. Fit using training trials
+    a. Group
+    b. Subjects
+
+3. Test fits by simulating with test trials and best fit parameters
+    a. Group
+    b. Subjects
+    ** Need to modify code to count fixations **
+
+4. Plot data vs. sims
+    a. Group
+    b. Subjects
+    ** look at the plots from computational modeling book how they do it**
+"""
+
 
 #-----------------#
 # OUTPUT PATH     #
 #-----------------#
 # Version
-version_num = str(sys.argv[1]) + "/"
+version_num = "004/"
 # Which node
-node_num = str(sys.argv[2])
+script_num = "01"
 
 # Date
-now = datetime.datetime.now().strftime('%Y_%m_%d_%H_')
-print(version_num + now + str(sys.argv[3]))
+now = datetime.datetime.now().strftime('%Y_%m_%d_%H%M/')
+print(version_num + now)
 
 # Path
-path = "MADE/" + "version/" + version_num + "output/" + now + "_" + str(sys.argv[3]) + "/"
+path = "01_MADE/" + "version/" + version_num + "output/" + now
+progress_path = path + "progress/"
 # Make directory
-os.makedirs(path, exist_ok=True)
+if not os.path.exists(path):
+    os.makedirs(path)
+    os.makedirs(progress_path)
 
 #-------------#
 # DATA FILES  #
 #-------------#
 # Trial Data
-expdata_file_name = "MADE/data/made_v2/expdata.csv"
+expdata_file_name = "01_MADE/data/made_v2/expdata.csv"
 # Fixation Data
-fixations_file_name = "MADE/data/made_v2/fixations.csv"
+fixations_file_name = "01_MADE/data/made_v2/fixations.csv"
 
 #------------------#
 # aDDM PARAMETERS  #
@@ -58,7 +80,7 @@ parameter_search_space = {"drift_weight": drift_weight,
 #----------------#
 # VALUES ARRAY   #
 #----------------#
-sims_per_val = 500
+sims_per_val = 1000
 # Get left and right values from data
 values_array_addm = utils_addm.values_for_simulation_addm(expdata_file_name, sims_per_val)
 # Create num_sims var
@@ -69,7 +91,8 @@ input_vals = utils_addm.Input_Values(
     values_array=values_array_addm,
     num_sims=num_sims,
     startVar=0,
-    nonDec=0.3,
+    nonDec=0.8,   # change to add time based on each fixation
+    # calculate based on difference between exp 1 & 2 RTS.
     nonDecVar=0,
     driftVar=0,
     maxRT=10,
@@ -86,8 +109,12 @@ def rt_dist_sim(parameters):
     # NEXT: dwell_array would be by individual
     dwell_array = utils_addm.create_dwell_array(num_sims, fixations_file_name, data='sim')
     # Run simulations
-    rtDist = utils_addm.simul_addm_rt_dist(parameters, input_vals, dwell_array, 'percent')
+    rtDist = utils_addm.simul_addm_rt_dist(parameters, input_vals, dwell_array)
 
+    # tracking which/how many files have been written
+    f = open(progress_path + str(time.time()) + ".txt", 'w')
+    f.write("Parameters: " + str(parameters))
+    f.close()
     return rtDist
 
 
@@ -107,15 +134,14 @@ run_duration = datetime.timedelta(seconds=run_duration)
 # SAVE FILES      #
 #-----------------#
 
-# Save RT dist file & fix count
-utils_addm.pickle_save(path, "rt_dist_" + node_num + ".pickle", rt_dist)
+# Save RT dist file
+utils_addm.pickle_save(path, "rt_dist_" + script_num + ".pickle", rt_dist)
 
 # Save parameters
 utils_addm.pickle_save(path, "parameters.pickle", parameter_search_space)
 utils_addm.pickle_save(path, "input_vals.pickle", input_vals)
-
 # Save Run time
-f = open(path + "runtime_" + node_num + ".txt", 'w')
+f = open(path + "runtime_" + script_num + ".txt", 'w')
 f.write("Run time: " + str(run_duration))
 f.write("\n\nSimulations per value: " + str(sims_per_val))
 f.write("\nNum sims: " + str(num_sims))
