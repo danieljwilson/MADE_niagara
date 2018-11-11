@@ -1,0 +1,38 @@
+007/2018_11_08_14_01a_sim
+Your parameter search space is size: (21504, 4).
+You will run 500 simulations for each of 81 value combinations for a total of 40500 simulations.
+
+scontrol show jobid 592706
+JobId=592706 JobName=007..3
+   UserId=wilsodj(3060497) GroupId=chutcher(6007220) MCS_label=N/A
+   Priority=105643 Nice=0 Account=def-chutcher QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=05:36:41 TimeLimit=11:45:00 TimeMin=N/A
+   SubmitTime=2018-11-07T22:06:34 EligibleTime=2018-11-07T22:06:34
+   StartTime=2018-11-08T14:55:58 EndTime=2018-11-08T20:32:39 Deadline=N/A
+   PreemptTime=None SuspendTime=None SecsPreSuspend=0
+   LastSchedEval=2018-11-08T14:55:58
+   Partition=compute AllocNode:Sid=nia-login02:318660
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=nia1119
+   BatchHost=nia1119
+   NumNodes=1 NumCPUs=80 NumTasks=40 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=80,node=1,billing=40
+   Socks/Node=* NtasksPerN:B:S:C=40:0:*:* CoreSpec=*
+   MinCPUsNode=40 MinMemoryNode=0 MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   Gres=(null) Reservation=(null)
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/gpfs/fs0/scratch/c/chutcher/wilsodj/MADE/scripts/jobscript.sh
+   WorkDir=/gpfs/fs0/scratch/c/chutcher/wilsodj
+   StdErr=/scratch/c/chutcher/wilsodj/MADE/007..3.592706.txt
+   StdIn=/dev/null
+   StdOut=/scratch/c/chutcher/wilsodj/MADE/007..3.592706.txt
+   Power=
+
+sacct -j 592706
+       JobID    JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+592706           007..3 def-chutc+   05:36:41                        29:19.857 18-12:15:+      0:0 
+592706.batch      batch def-chutc+   05:36:41  72246008K  17506804K  29:19.857 18-12:15:+      0:0 

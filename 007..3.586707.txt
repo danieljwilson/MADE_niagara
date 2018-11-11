@@ -1,3 +1,39 @@
 007/2018_11_07_03_01a_sim
 Your parameter search space is size: (21504, 4).
 You will run 1000 simulations for each of 81 value combinations for a total of 81000 simulations.
+slurmstepd: error: *** JOB 586707 ON nia1121 CANCELLED AT 2018-11-07T14:34:14 DUE TO TIME LIMIT ***
+
+scontrol show jobid 586707
+JobId=586707 JobName=007..3
+   UserId=wilsodj(3060497) GroupId=chutcher(6007220) MCS_label=N/A
+   Priority=133717 Nice=0 Account=def-chutcher QOS=normal
+   JobState=COMPLETING Reason=TimeLimit Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:15
+   RunTime=11:00:18 TimeLimit=11:00:00 TimeMin=N/A
+   SubmitTime=2018-11-06T22:43:20 EligibleTime=2018-11-06T22:43:20
+   StartTime=2018-11-07T03:33:56 EndTime=2018-11-07T14:34:14 Deadline=N/A
+   PreemptTime=None SuspendTime=None SecsPreSuspend=0
+   LastSchedEval=2018-11-07T03:33:56
+   Partition=compute AllocNode:Sid=nia-login03:265565
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=nia1121
+   BatchHost=nia1121
+   NumNodes=1 NumCPUs=80 NumTasks=40 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=80,node=1,billing=40
+   Socks/Node=* NtasksPerN:B:S:C=40:0:*:* CoreSpec=*
+   MinCPUsNode=40 MinMemoryNode=0 MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   Gres=(null) Reservation=(null)
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/gpfs/fs0/scratch/c/chutcher/wilsodj/MADE/scripts/jobscript.sh
+   WorkDir=/gpfs/fs0/scratch/c/chutcher/wilsodj
+   StdErr=/scratch/c/chutcher/wilsodj/MADE/007..3.586707.txt
+   StdIn=/dev/null
+   StdOut=/scratch/c/chutcher/wilsodj/MADE/007..3.586707.txt
+   Power=
+
+sacct -j 586707
+       JobID    JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+586707           007..3 def-chutc+   11:00:18                        47:59.167 36-10:51:+      0:0 
+586707.batch      batch def-chutc+   11:00:19  75395100K  20706764K  47:59.167 36-10:51:+     0:15 

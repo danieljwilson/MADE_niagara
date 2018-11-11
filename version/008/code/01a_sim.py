@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pickle
 sys.path.append('/scratch/c/chutcher/wilsodj/MADE/')
-import modules.utils_addm_007 as utils_addm     # for importing custom module
+import modules.utils_addm_008 as utils_addm     # for importing custom module
 
 #-----------------#
 # OUTPUT PATH     #
@@ -18,23 +18,38 @@ import modules.utils_addm_007 as utils_addm     # for importing custom module
 version_num = str(sys.argv[1]) + "/"
 # Which node
 node_num = str(sys.argv[2])
+# Script name
+script = str(sys.argv[3])
+# Subject
+subject = str(sys.argv[4])
 
 # Date
 now = datetime.datetime.now().strftime('%Y_%m_%d_%H_')
-print(version_num + now + str(sys.argv[3]))
+# sys.argv[3] is the script name (eg. 01a_sim)
+print(version_num + "output/" + "sub_" + subject + "_" + now + script)
 
 # Path
-path = "MADE/" + "version/" + version_num + "output/" + now + "_" + str(sys.argv[3]) + "/"
+save_path = "MADE/" + "version/" + version_num + \
+    "output/" + "sub_" + subject + "/" + now + script + "/"
 # Make directory
-os.makedirs(path, exist_ok=True)
+os.makedirs(save_path, exist_ok=True)
 
 #-------------#
 # DATA FILES  #
 #-------------#
+# Project Path
+path = "/scratch/c/chutcher/wilsodj/MADE/"
 # Trial Data
-expdata_file_name = "MADE/data/made_v2/expdata.csv"
+expdata_file_name = path + "data/made_v2/expdata.csv"
 # Fixation Data
-fixations_file_name = "MADE/data/made_v2/fixations.csv"
+fixations_file_name = path + "data/made_v2/fixations.csv"
+# Synth First Fixations
+# Need encoding='bytes' since pickle was created in Python 2
+first_fix_synth_dist = pickle.load(
+    open(path + "version/008/files/first_fix_synth_dist.p", "rb"), encoding='bytes')
+# Synth Mid Fixations
+mid_fix_synth_dist = pickle.load(
+    open(path + "version/008/files/mid_fix_synth_dist.p", "rb"), encoding='bytes')
 
 #------------------#
 # aDDM PARAMETERS  #
@@ -62,12 +77,15 @@ sims_per_val = 500
 # Get left and right values from data
 values_array_addm = utils_addm.values_for_simulation_addm(expdata_file_name, sims_per_val)
 # Create num_sims var
+# Create num_sims var
 num_sims = values_array_addm.shape[1]
 
 input_vals = utils_addm.Input_Values(
     parameter_combos=parameter_combos,
     values_array=values_array_addm,
     num_sims=num_sims,
+    max_fix=21,           # max number of fixations for simulation array
+
     startVar=0,
     nonDec=0.3,
     nonDecVar=0,
@@ -77,14 +95,19 @@ input_vals = utils_addm.Input_Values(
     s=0.1,                  # scaling factor (Ratcliff) (check if variance or SD)
 )
 
+# specify subject
+subject = int(subject)
+
 #-----------------#
 # FUNCTION TO MAP #
 #-----------------#
 
 
 def rt_dist_sim(parameters):
-    # NEXT: dwell_array would be by individual
-    dwell_array = utils_addm.create_dwell_array(num_sims, fixations_file_name, data='sim')
+    dwell_array = utils_addm.create_synth_dwell_array(input_vals,
+                                                      first_fix_synth_dist[subject],
+                                                      mid_fix_synth_dist[subject])
+
     # Run simulations
     rtDist = utils_addm.simul_addm_rt_dist(parameters, input_vals, dwell_array, 'percent')
 
