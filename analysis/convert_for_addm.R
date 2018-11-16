@@ -133,7 +133,7 @@ expdata <- data.frame("parcode" = df_input$subject , "trial" = df_input$trial,
                       "face_bin" = df_input$face_bin, "house_bin" = df_input$house_bin,
                       "face_bin_val" = df_input$face_bin_c, "house_bin_val" = df_input$house_bin_c)
 
-write.csv(expdata, file = "/Data/expdata_v2.csv", row.names=FALSE)
+write.csv(expdata, file = "data/expdata_v2.csv", row.names=FALSE)
 
 
 # from  fixation_intermediary_df we need:
@@ -146,7 +146,7 @@ fixations <- data.frame("parcode" = fixation_intermediary_df$subject,
                         "fix_num" = fixation_intermediary_df$fixNum,
                         "rev_fix_num" = fixation_intermediary_df$revFixNum)
 
-write.csv(fixations, file = "/Users/djw/Dropbox/PROGRAMMING/*NEURO/aDDM_Tavares/made_data/fixations.csv", row.names=FALSE)
+write.csv(fixations, file = "data/fixations_v2.csv", row.names=FALSE)
 
 
 
