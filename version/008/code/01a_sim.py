@@ -22,15 +22,17 @@ node_num = str(sys.argv[2])
 script = str(sys.argv[3])
 # Subject
 subject = str(sys.argv[4])
+# Experiment version
+exp_ver = str(sys.argv[5])
 
 # Date
 now = datetime.datetime.now().strftime('%Y_%m_%d_%H_')
-# sys.argv[3] is the script name (eg. 01a_sim)
+# Info on sim
 print(version_num + "output/" + "sub_" + subject + "_" + now + script)
 
-# Path
+# Save Path (for outputs)
 save_path = "MADE/" + "version/" + version_num + \
-    "output/" + "sub_" + subject + "/" + now + script + "/"
+    "output/" + "exp_" + exp_ver + "/" + "sub_" + subject + "/" + now + script + "/"
 # Make directory
 os.makedirs(save_path, exist_ok=True)
 
@@ -38,18 +40,18 @@ os.makedirs(save_path, exist_ok=True)
 # DATA FILES  #
 #-------------#
 # Project Path
-path = "/scratch/c/chutcher/wilsodj/MADE/"
+path = "/scratch/c/chutcher/wilsodj/MADE/version/"
 # Trial Data
-expdata_file_name = path + "data/made_v2/expdata.csv"
+expdata_file_name = path + "data/expdata_v1.csv"
 # Fixation Data
-fixations_file_name = path + "data/made_v2/fixations.csv"
+fixations_file_name = path + "data/fixations_v1.csv"
 # Synth First Fixations
 # Need encoding='bytes' since pickle was created in Python 2
 first_fix_synth_dist = pickle.load(
-    open(path + "version/008/files/first_fix_synth_dist.p", "rb"), encoding='bytes')
+    open(path + "data/first_fix_synth_dist_v1.p", "rb"), encoding='bytes')
 # Synth Mid Fixations
 mid_fix_synth_dist = pickle.load(
-    open(path + "version/008/files/mid_fix_synth_dist.p", "rb"), encoding='bytes')
+    open(path + "data/mid_fix_synth_dist_v1.p", "rb"), encoding='bytes')
 
 #------------------#
 # aDDM PARAMETERS  #
@@ -77,14 +79,13 @@ sims_per_val = 500
 # Get left and right values from data
 values_array_addm = utils_addm.values_for_simulation_addm(expdata_file_name, sims_per_val)
 # Create num_sims var
-# Create num_sims var
 num_sims = values_array_addm.shape[1]
 
 input_vals = utils_addm.Input_Values(
     parameter_combos=parameter_combos,
     values_array=values_array_addm,
     num_sims=num_sims,
-    max_fix=21,           # max number of fixations for simulation array
+    max_fix=25,           # max number of fixations for simulation array
 
     startVar=0,
     nonDec=0.3,
@@ -131,14 +132,14 @@ run_duration = datetime.timedelta(seconds=run_duration)
 #-----------------#
 
 # Save RT dist file & fix count
-utils_addm.pickle_save(path, "rt_dist_" + node_num + ".pickle", rt_dist)
+utils_addm.pickle_save(save_path, "rt_dist_" + subject + "_" + node_num + ".pickle", rt_dist)
 
 # Save parameters
-utils_addm.pickle_save(path, "parameters.pickle", parameter_search_space)
-utils_addm.pickle_save(path, "input_vals.pickle", input_vals)
+utils_addm.pickle_save(save_path, "parameters.pickle", parameter_search_space)
+utils_addm.pickle_save(save_path, "input_vals.pickle", input_vals)
 
 # Save Run time
-f = open(path + "runtime_" + node_num + ".txt", 'w')
+f = open(save_path + "runtime_" + node_num + ".txt", 'w')
 f.write("Run time: " + str(run_duration))
 f.write("\n\nSimulations per value: " + str(sims_per_val))
 f.write("\nNum sims: " + str(num_sims))
